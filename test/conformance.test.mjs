@@ -21,7 +21,7 @@ test("initialize satisfies the driver's compatibility gate", async () => {
 
     const modelState = result._meta?.modelState;
     assert.ok(Array.isArray(modelState.availableModels) && modelState.availableModels.length > 0);
-    // Agy's own ids, effort included: its proxy asks for gemini-4-argon-medium
+    // Agy's own ids, effort included: its ACP server starts on gemini-4-argon-medium
     // by default and accepts the -low/-high variants through session/set_model.
     assert.deepEqual(
       modelState.availableModels.map((model) => model.modelId),

@@ -1,16 +1,7 @@
 #!/usr/bin/env node
-// Ask the real ACP server what it can actually run, instead of trusting
-// `agy models` or the CCPA response. Both list more than the server will
-// serve: `agentModelSorts` carries models the personal-OAuth build filters out,
-// and `set_model` is the only place that filter becomes visible.
-//
-//   node ops/agy-models.mjs              # the catalogue `session/new` offers
-//   node ops/agy-models.mjs --probe      # set_model each listed id
-//   node ops/agy-models.mjs --probe --prompt   # ...and run one turn on it
-//   node ops/agy-models.mjs --model claude-opus-5-5-high   # ask why not
-//
-// Exits 1 when a probe disagrees with the catalogue, so it doubles as a check
-// after upgrading the server pair.
+// Inspect the installed ACP server's session model catalogue.
+// --probe tests model selection; --prompt also makes real model calls.
+// --model <id> restricts the check to a model returned by that server.
 import "../src/bootstrap.js";
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";

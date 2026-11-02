@@ -19,7 +19,7 @@ export function resolveAgyAcpCommand(env = process.env) {
 
 /**
  * `GROK_SHIM_BACKEND_BIN` replaces the backend entirely (the test fixture uses
- * it, and it is the seam for driving Maka or dsh later). Without it the shim
+ * it, and it can drive another ACP agent). Without it the shim
  * drives the Antigravity ACP server.
  */
 export function resolveBackend(env = process.env) {

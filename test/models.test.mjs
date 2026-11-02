@@ -1,6 +1,4 @@
-// The agy catalogue is a choice of families, because which families a server
-// will actually serve depends on its build: the stock one filters CCPA's list
-// down to ids that start with `gemini`.
+// Configured catalogues are filtered by the installed server's advertised IDs.
 import assert from "node:assert/strict";
 import test from "node:test";
 

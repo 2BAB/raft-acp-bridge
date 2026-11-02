@@ -298,8 +298,8 @@ export class Shim {
   }
 
   #finishAuthenticate(entry, message) {
-    // agy accepts `oauth-personal` only when an Antigravity login already
-    // exists. `session/new` reports the real failure, so this stays advisory.
+    // Interactive authentication is owned by the backend. Session creation
+    // reports a missing setup, so this preliminary reply remains advisory.
     if (hasError(message)) {
       this.#log(`backend: authenticate failed: ${message.error?.message ?? "unknown"}`);
     }
@@ -460,7 +460,7 @@ export class Shim {
         return;
       }
       // Agy implements `session/set_model` for real: it accepts its own
-      // `gemini-4-argon-<effort>` ids and the next proxy request uses the
+      // `gemini-4-argon-<effort>` ids and the next backend request uses the
       // chosen one. So this is forwarded, not faked — and a rejection reaches
       // the caller instead of being swallowed.
       // The effort lives in the model id; `_meta.reasoningEffort` means nothing.
