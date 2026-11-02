@@ -24,6 +24,17 @@ function isExecutableFile(candidate) {
   }
 }
 
+function isBridgeEntry(file) {
+  let descriptor;
+  try {
+    descriptor = fs.openSync(file, "r");
+    const header = Buffer.alloc(1024);
+    const size = fs.readSync(descriptor, header, 0, header.length, 0);
+    return header.subarray(0, size).includes(Buffer.from("# raft-acp-bridge-entry"));
+  } catch { return false; }
+  finally { if (descriptor !== undefined) fs.closeSync(descriptor); }
+}
+
 /**
  * Finds the Grok Build CLI this shim stands in for, skipping itself.
  *
@@ -33,16 +44,20 @@ function isExecutableFile(candidate) {
  * real thing.
  */
 export function resolveRealGrok(env = process.env) {
-  const explicit = (env.GROK_SHIM_REAL_GROK ?? "").trim();
-  if (explicit) return resolveCommand(explicit, env);
-
   const excluded = new Set([SELF_ENTRY, readConfig(env).shimEntry].map(realpathOrNull).filter(Boolean));
+  const explicit = (env.GROK_SHIM_REAL_GROK ?? "").trim();
+  if (explicit) {
+    const command = resolveCommand(explicit, env);
+    const real = realpathOrNull(command);
+    return real && (excluded.has(real) || isBridgeEntry(real)) ? null : command;
+  }
+
   for (const dir of (env.PATH ?? "").split(path.delimiter)) {
     if (!dir) continue;
     const candidate = path.join(dir, "grok");
     const real = realpathOrNull(candidate);
     if (!real) continue;
-    if (excluded.has(real)) continue;
+    if (excluded.has(real) || isBridgeEntry(real)) continue;
     if (!isExecutableFile(real)) continue;
     return candidate;
   }

@@ -47,12 +47,14 @@ test("extensions observe sessions, model results, direct/queued prompts and proc
 
 test("real CLI discovery skips both the package and the configured wrapper entry", (t) => {
   const directory = scratch(t);
-  for (const name of ["bin", "standalone", "real"]) fs.mkdirSync(path.join(directory, name));
+  for (const name of ["bin", "standalone", "other", "real"]) fs.mkdirSync(path.join(directory, name));
   fs.writeFileSync(path.join(directory, "bin/grok"), "#!/bin/sh\nexit 99\n", { mode: 0o755 });
   fs.symlinkSync(path.join(REPO_ROOT, "bin/grok"), path.join(directory, "standalone/grok"));
   fs.symlinkSync(path.join(REPO_ROOT, "fixtures/fake-real-grok.mjs"), path.join(directory, "real/grok"));
-  const env = { SHIM_CONFIG_ROOT: directory, PATH: ["bin", "standalone", "real"].map((name) => path.join(directory, name)).join(path.delimiter) };
+  fs.writeFileSync(path.join(directory, "other/grok"), "#!/bin/sh\n# raft-acp-bridge-entry\nexit 99\n", { mode: 0o755 });
+  const env = { SHIM_CONFIG_ROOT: directory, PATH: ["bin", "standalone", "other", "real"].map((name) => path.join(directory, name)).join(path.delimiter) };
   assert.equal(resolveRealGrok(env), path.join(directory, "real/grok"));
+  assert.equal(resolveRealGrok({ ...env, GROK_SHIM_REAL_GROK: path.join(directory, "other/grok") }), null);
   const config = readConfig({ ...env, SHIM_EXTENSION_MODULE: "./extension.mjs" });
   const plist = launchAgentPlist(config, env.PATH);
   assert.match(plist, /<key>SHIM_CONFIG_ROOT<\/key>/);
