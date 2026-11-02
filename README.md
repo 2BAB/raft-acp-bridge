@@ -1,5 +1,7 @@
 # raft-acp-bridge
 
+English | [简体中文](README.zh-CN.md)
+
 An ACP bridge that lets Raft's Grok Build runtime drive Antigravity ACP or
 Maka. The shim is a Node.js CLI installed as `grok` on `PATH`; it adapts model
 selection, session handling and messages sent while an agent is busy.
@@ -41,8 +43,19 @@ and set each agent's environment:
 | Antigravity | `GROK_SHIM_PROFILE=agy` |
 | Maka | `GROK_SHIM_PROFILE=maka` |
 
-The model picker automatically prefixes Antigravity model IDs with `agy_`
-and Maka model IDs with `maka_`; no additional configuration is needed.
+In **Advanced → Environment Variables**, click **Add Variable**, enter
+`GROK_SHIM_PROFILE` as the name and `agy` or `maka` as the value. Choose a
+**Model** and **Reasoning** value, then click **Save**. These screenshots show
+an Antigravity agent:
+
+<p>
+  <img src="docs/images/raft-agent-runtime-config.png" alt="Raft runtime configuration: Grok Build with GROK_SHIM_PROFILE set to agy" width="420">
+  <img src="docs/images/raft-agent-model-picker.png" alt="Raft model picker showing Antigravity model names and agy-prefixed IDs" width="420">
+</p>
+
+Model IDs in the picker use `agy_` for Antigravity and `maka_` for Maka; these
+prefixes are added automatically and require no configuration. Available
+models depend on the installed backend.
 
 When no real Grok CLI is installed, the profile alone is enough. If both CLIs
 are installed, also set `RAFT_GROK_BACKEND=shim` on bridge-backed agents to
@@ -134,8 +147,8 @@ not require backend sign-in or real model calls.
 
 The integration approach and protocol experiments are covered in these articles:
 
-- [Integrating Antigravity CLI into External Programs](https://2bab.me/en/blog/2026-10-18-antigravity-external-integration/)
-- [Integrating Antigravity and Apache/Maka into Raft via ACP](https://2bab.me/en/blog/2026-10-20-raft-runtime-slot/)
+- [Integrating Antigravity CLI into External Programs](https://2bab.me/en/blog/2026-10-18-antigravity-external-integration/) ([中文](https://2bab.me/zh/blog/2026-10-18-antigravity-external-integration/))
+- [Integrating Antigravity and Apache/Maka into Raft via ACP](https://2bab.me/en/blog/2026-10-20-raft-runtime-slot/) ([中文](https://2bab.me/zh/blog/2026-10-20-raft-runtime-slot/))
 
 Related projects: [Raft](https://github.com/botiverse/raft-source),
 [Maka](https://github.com/apache/maka), and
