@@ -18,7 +18,7 @@ Raft 的 Grok Build 适配器 → grok（本桥接程序）→ 你的 ACP agent
 CLI 只使用 Node 内置模块，后端可执行文件需要单独安装。
 真实的 Grok Build CLI 也可以与本桥接程序共存。
 
-目前 agy 接入仅验证支持官方 ACP 后端提供的 Gemini 模型，具体可用型号取决于后端版本和账号权限。
+目前 agy 只支持 Gemini 模型，具体可用型号取决于后端版本和账号权限。
 
 ## 在 Mac 上安装
 

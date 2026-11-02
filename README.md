@@ -19,8 +19,8 @@ agent is busy. It includes adapters for Antigravity ACP and Maka, plus a custom
 backend command setting. The CLI uses Node built-ins only; backend executables
 are installed separately. A real Grok Build CLI can coexist with the bridge.
 
-Current agy support is verified only for Gemini models exposed by the official
-ACP backend; available models depend on the backend version and account permissions.
+Currently, agy supports only Gemini models; available models depend on the
+backend version and account permissions.
 
 ## Install on a Mac
 
