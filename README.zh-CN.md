@@ -2,12 +2,23 @@
 
 [English](README.md) | 简体中文
 
-通过 ACP，让 Raft 的 Grok Build runtime 使用 Antigravity ACP 或 Maka。
-这个桥接程序（shim）是一个放在 `PATH` 上、以 `grok` 为入口的 Node.js CLI，
-负责适配模型选择、会话处理，以及 agent 忙碌时收到的消息。
+**借用 Raft 已有的 Grok Build ACP 接口，把它变成连接其他 ACP agent 的通用桥梁。**
+Raft 本来就通过 ACP 调用 Grok Build，本项目复用这条接入路径，
+让 Antigravity、Maka 等 agent 也能在 Raft 中运行，无需修改 Raft 应用。
 
-Raft 应用无需修改，shim 也可以与真实的 Grok Build CLI 共存。
-JavaScript 部分只使用 Node 内置模块。后端可执行文件需要单独安装。
+使用时，在 Raft 的 runtime 菜单里选择 **Grok Build**。
+Raft 会启动 `PATH` 上名为 `grok` 的命令；本项目提供这个入口，
+再把请求转发给你配置的后端。因此，界面上仍显示 Grok Build，
+实际工作的 agent 可以是 Antigravity、Maka 或自定义 ACP 后端。
+
+```text
+Raft 的 Grok Build 适配器 → grok（本桥接程序）→ 你的 ACP agent
+```
+
+桥接程序（shim）负责适配模型选择、会话处理，以及 agent 忙碌时收到的消息。
+目前内置 Antigravity ACP 和 Maka 适配器，也支持配置自定义后端命令。
+CLI 只使用 Node 内置模块，后端可执行文件需要单独安装。
+真实的 Grok Build CLI 也可以与本桥接程序共存。
 
 ## 在 Mac 上安装
 

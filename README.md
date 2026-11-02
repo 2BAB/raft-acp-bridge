@@ -2,12 +2,24 @@
 
 English | [简体中文](README.zh-CN.md)
 
-An ACP bridge that lets Raft's Grok Build runtime drive Antigravity ACP or
-Maka. The shim is a Node.js CLI installed as `grok` on `PATH`; it adapts model
-selection, session handling and messages sent while an agent is busy.
+**Reuse Raft's Grok Build ACP integration as a general bridge to other ACP
+agents.** Raft already communicates with Grok Build through ACP. This project
+reuses that connection to run agents such as Antigravity and Maka inside Raft,
+without modifying the Raft app.
 
-The Raft app stays unmodified. A real Grok Build CLI can coexist with the shim.
-JavaScript uses Node built-ins only. Backend executables are installed separately.
+You select **Grok Build** in Raft's runtime menu. Raft launches a command named
+`grok`, which this bridge provides on `PATH`, and the bridge forwards requests
+to the backend you configure. The menu still says Grok Build; the agent doing
+the work can be Antigravity, Maka or a custom ACP backend.
+
+```text
+Raft's Grok Build adapter → grok (this bridge) → your ACP agent
+```
+
+The bridge adapts model selection, session handling and messages sent while an
+agent is busy. It includes adapters for Antigravity ACP and Maka, plus a custom
+backend command setting. The CLI uses Node built-ins only; backend executables
+are installed separately. A real Grok Build CLI can coexist with the bridge.
 
 ## Install on a Mac
 
