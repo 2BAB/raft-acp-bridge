@@ -1,7 +1,5 @@
 # raft-acp-bridge
 
-English | [简体中文](README.zh-CN.md)
-
 **Reuse Raft's Grok Build ACP integration as a general bridge to other ACP
 agents.** Raft already communicates with Grok Build through ACP. This project
 reuses that connection to run agents such as Antigravity and Maka inside Raft,

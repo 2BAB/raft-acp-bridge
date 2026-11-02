@@ -1,7 +1,5 @@
 # raft-acp-bridge
 
-[English](README.md) | 简体中文
-
 **借用 Raft 已有的 Grok Build ACP 接口，把它变成连接其他 ACP agent 的通用桥梁。**
 Raft 本来就通过 ACP 调用 Grok Build，本项目复用这条接入路径，
 让 Antigravity、Maka 等 agent 也能在 Raft 中运行，无需修改 Raft 应用。
