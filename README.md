@@ -36,10 +36,13 @@ commands. `SHIM_BIN` selects another installation location; see
 Restart Raft's Computer service. In Raft, select the **Grok Build** runtime
 and set each agent's environment:
 
-| Backend | Agent environment | Model ID prefix |
-| --- | --- | --- |
-| Antigravity | `GROK_SHIM_PROFILE=agy` | `agy_` |
-| Maka | `GROK_SHIM_PROFILE=maka` | `maka_` |
+| Backend | Agent environment |
+| --- | --- |
+| Antigravity | `GROK_SHIM_PROFILE=agy` |
+| Maka | `GROK_SHIM_PROFILE=maka` |
+
+The model picker automatically prefixes Antigravity model IDs with `agy_`
+and Maka model IDs with `maka_`; no additional configuration is needed.
 
 When no real Grok CLI is installed, the profile alone is enough. If both CLIs
 are installed, also set `RAFT_GROK_BACKEND=shim` on bridge-backed agents to
