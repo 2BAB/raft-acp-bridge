@@ -7,8 +7,8 @@ const FIXTURE = new URL("../fixtures/fake-acp-backend.mjs", import.meta.url).pat
 const REQUEST_TIMEOUT_MS = 5_000;
 
 /** Boots `grok agent stdio` against the fixture backend and speaks to it. */
-export async function startShim({ env = {} } = {}) {
-  const child = spawn(BIN, ["agent", "--no-leader", "--always-approve", "stdio"], {
+export async function startShim({ env = {}, bin = BIN } = {}) {
+  const child = spawn(bin, ["agent", "--no-leader", "--always-approve", "stdio"], {
     stdio: ["pipe", "pipe", "pipe"],
     env: {
       ...process.env,
