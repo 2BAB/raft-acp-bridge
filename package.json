@@ -1,0 +1,27 @@
+{
+  "name": "raft-acp-bridge",
+  "version": "0.3.0",
+  "description": "An ACP bridge from Raft to user-installed Antigravity and Maka agents.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "bin": {
+    "grok": "bin/grok"
+  },
+  "files": [
+    "bin",
+    "src",
+    "ops",
+    "docs",
+    ".env.sample",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "doctor": "node ops/doctor.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}

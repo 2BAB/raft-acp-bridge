@@ -1,0 +1,38 @@
+#!/bin/sh
+# A `grok` stand-in for Raft. Resolves its own symlink so it can live in
+# ~/.local/bin, then hands stdio to the Node entry point untouched.
+set -eu
+
+target=$0
+while [ -L "$target" ]; do
+  dir=$(CDPATH= cd -- "$(dirname -- "$target")" && pwd)
+  link=$(readlink "$target")
+  case $link in
+    /*) target=$link ;;
+    *) target=$dir/$link ;;
+  esac
+done
+here=$(CDPATH= cd -- "$(dirname -- "$target")" && pwd)
+entry=$here/../src/cli.js
+
+if command -v node >/dev/null 2>&1; then
+  exec node "$entry" "$@"
+fi
+
+# Raft spawns runtimes without a shell, so PATH is whatever the daemon
+# captured from the login shell. If node is not on it, look where node
+# installers usually put it before giving up.
+for candidate in \
+  /opt/homebrew/bin/node \
+  /usr/local/bin/node \
+  "$HOME/.volta/bin/node" \
+  "$HOME"/.nvm/versions/node/*/bin/node \
+  "$HOME"/.local/share/fnm/node-versions/*/installation/bin/node
+do
+  if [ -x "$candidate" ]; then
+    exec "$candidate" "$entry" "$@"
+  fi
+done
+
+echo "grok (raft-grok-shim): node not found on PATH" >&2
+exit 127
