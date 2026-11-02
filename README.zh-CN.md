@@ -133,6 +133,12 @@ Raft 界面中的 runtime 名称仍显示为 Grok Build。
 
 ## 开发
 
+你可以自行扩展，接入更多 ACP 后端。初步尝试时，通过 `GROK_SHIM_BACKEND_BIN`
+和 `GROK_SHIM_BACKEND_ARGS` 指向自己的 agent。需要专门适配时，可以参考
+[src/backends/](src/backends/) 下的现有实现，在 [src/profiles.js](src/profiles.js)
+注册 profile，并在 [src/models.js](src/models.js) 添加模型前缀，
+再使用测试后端验证模型选择和忙碌时的消息处理。
+
 ```sh
 npm test
 ```

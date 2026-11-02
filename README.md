@@ -142,6 +142,13 @@ Machine paths are listed in [.env.sample](.env.sample) and the
 
 ## Development
 
+You can extend the bridge to support more ACP backends. To experiment with your
+own agent, set `GROK_SHIM_BACKEND_BIN` and `GROK_SHIM_BACKEND_ARGS`. For a dedicated
+integration, follow the adapters in [src/backends/](src/backends/), register its
+profile in [src/profiles.js](src/profiles.js) and its model prefix in
+[src/models.js](src/models.js), and add fixture-based tests for its model
+selection and busy-message behavior.
+
 ```sh
 npm test
 ```
