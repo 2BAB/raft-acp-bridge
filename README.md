@@ -38,8 +38,12 @@ and set each agent's environment:
 
 | Backend | Agent environment | Model ID prefix |
 | --- | --- | --- |
-| Antigravity | `RAFT_GROK_BACKEND=shim`, `GROK_SHIM_PROFILE=agy` | `agy_` |
-| Maka | `RAFT_GROK_BACKEND=shim`, `GROK_SHIM_PROFILE=maka` | `maka_` |
+| Antigravity | `GROK_SHIM_PROFILE=agy` | `agy_` |
+| Maka | `GROK_SHIM_PROFILE=maka` | `maka_` |
+
+When no real Grok CLI is installed, the profile alone is enough. If both CLIs
+are installed, also set `RAFT_GROK_BACKEND=shim` on bridge-backed agents to
+override the default preference for the real CLI.
 
 Send a short message and confirm that the agent returns a reply.
 
