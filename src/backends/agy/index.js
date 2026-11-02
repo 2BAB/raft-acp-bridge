@@ -9,9 +9,9 @@ import { readConfig, resolveCommand, backendArguments } from "../../config.js";
 
 /**
  * The Antigravity ACP server is a packaged executable (`agy_acp_server.par`,
- * hundreds of MB) that must stay beside its helper binary. It is a Google
- * artifact, not something this repository ships: extract it and either point
- * `AGY_ACP_BIN` at it or drop the pair into the default location below.
+ * hundreds of MB) that must stay beside its matching helper binary. Extract
+ * the Google distribution and set `AGY_ACP_BIN`, or install the pair at the
+ * default location.
  */
 export function resolveAgyAcpCommand(env = process.env) {
   return { command: readConfig(env).agyBin, args: [] };
@@ -76,6 +76,15 @@ export async function discoverAgyModels({ command, args = [], cwd, timeoutMs = 1
 
   const child = spawn(command, args, { cwd, stdio: ["pipe", "pipe", "pipe"], env, shell: false });
   const pending = new Map();
+  let transportError = null;
+  const failPending = (error) => {
+    transportError ||= { error: { code: -32000, message: error.message } };
+    for (const settle of pending.values()) settle(transportError);
+    pending.clear();
+  };
+  child.on("error", failPending);
+  child.on("close", () => failPending(new Error("backend exited before replying")));
+  child.stdin.on("error", failPending);
   let nextId = 1;
   let stderrTail = "";
   let sessionId = null;
@@ -110,6 +119,7 @@ export async function discoverAgyModels({ command, args = [], cwd, timeoutMs = 1
 
   const request = (method, params) =>
     new Promise((resolve) => {
+      if (transportError) return resolve(transportError);
       const id = nextId++;
       const timer = setTimeout(() => {
         pending.delete(id);
@@ -119,7 +129,9 @@ export async function discoverAgyModels({ command, args = [], cwd, timeoutMs = 1
         clearTimeout(timer);
         resolve(message);
       });
-      child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
+      try {
+        child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
+      } catch (error) { failPending(error); }
     });
 
   try {
@@ -150,7 +162,6 @@ export async function discoverAgyModels({ command, args = [], cwd, timeoutMs = 1
       .map((entry) => nonEmptyString(recordValue(entry)?.value))
       .filter((id) => id !== null);
     log(`agy probe: ${ids.length} model(s), current ${String(option.currentValue)}`);
-    if (ids.length === 0) return null;
     // The probe session would otherwise linger in the server's store.
     await request("session/close", { sessionId });
     sessionId = null;

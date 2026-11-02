@@ -21,6 +21,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "install:cli": "node ops/install.mjs",
     "doctor": "node ops/doctor.mjs",
     "test": "node --test test/*.test.mjs"
   }

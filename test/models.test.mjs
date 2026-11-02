@@ -1,8 +1,8 @@
-// Configured catalogues are filtered by the installed server's advertised IDs.
+// Discovery controls the catalogue; configuration can narrow it.
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { AGY_MODEL_FAMILIES, knownModels, resolveModels, servedModels } from "../src/backends/agy/models.js";
+import { AGY_MODEL_FAMILIES, discoveredModels, resolveModels } from "../src/backends/agy/models.js";
 
 const ids = (models) => models.map((model) => model.modelId);
 const efforts = (models) => models.map((model) => model._meta.reasoningEfforts);
@@ -55,36 +55,24 @@ test("every family the shim knows names itself for the picker", () => {
   }
 });
 
-// What the installed server says it serves decides what the picker shows: a
-// expanded build contributes the families it newly serves, a stock one only
-// keeps the Gemini ids. Neither needs an environment variable.
-test("the served list narrows the known catalogue, it cannot invent one", () => {
-  const stock = servedModels(knownModels({}), [
-    "gemini-4-argon-low",
-    "gemini-4-argon-medium",
-    "gemini-4-argon-high",
-    "gemini-flash-demo",
-  ]);
-  assert.deepEqual(ids(stock), ["gemini-4-argon-low", "gemini-4-argon-medium", "gemini-4-argon-high"]);
-
-  const expanded = servedModels(knownModels({}), [
-    "gemini-4-argon-medium",
-    "claude-opus-5-5-high",
-    "gpt-oss-120b-medium",
-    "agy-demo-low",
-  ]);
-  assert.deepEqual(ids(expanded), [
-    "gemini-4-argon-medium",
-    "claude-opus-5-5-high",
-    "gpt-oss-120b-medium",
-  ]);
+test("discovery keeps new model IDs and adds known labels without inventing models", () => {
+  const models = discoveredModels(["gemini-4-argon-low", "gemini-flash-demo", "future-model-high", "gemini-flash-demo"]);
+  assert.deepEqual(ids(models), ["gemini-4-argon-low", "gemini-flash-demo", "future-model-high"]);
+  assert.equal(models[0].name, "Gemini 4 Argon Low");
+  assert.equal(models[1]._meta, undefined);
+  assert.deepEqual(models[2]._meta.reasoningEfforts, ["high"]);
 });
 
-test("an unusable probe leaves the declared catalogue alone", () => {
-  const declared = resolveModels({});
-  // null means "nothing matched": the caller keeps what it declared instead of
-  // advertising families this server has never heard of.
-  assert.equal(servedModels(knownModels({}), []), null);
-  assert.equal(servedModels(declared, ["something-else"]), null);
-  assert.deepEqual(ids(declared), ["gemini-4-argon-low", "gemini-4-argon-medium", "gemini-4-argon-high"]);
+test("explicit model and family settings filter discovery", () => {
+  const served = ["gemini-4-argon-low", "future-model-high"];
+  assert.deepEqual(ids(discoveredModels(served, { GROK_SHIM_MODEL_FAMILIES: "future-model" })), ["future-model-high"]);
+  const models = discoveredModels(served, { GROK_SHIM_MODELS: "gemini-4-argon-low:Mine", GROK_SHIM_MODEL_FAMILIES: "other" });
+  assert.deepEqual(ids(models), ["gemini-4-argon-low"]);
+  assert.equal(models[0].name, "Mine");
+});
+
+test("an empty successful catalogue or a filter mismatch reports an error", () => {
+  assert.throws(() => discoveredModels([]), /no matching models/);
+  assert.throws(() => discoveredModels(["future-model"], { GROK_SHIM_MODELS: "old-model:Old" }), /no matching models/);
+  assert.throws(() => discoveredModels(["future-model"], { GROK_SHIM_MODEL_FAMILIES: "unknown" }), /no matching models/);
 });

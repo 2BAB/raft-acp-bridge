@@ -35,9 +35,9 @@ raft-computer restart
 ```
 
 Computer supervises workers and each worker starts the runtime CLI processes.
-A worker started directly through private `__service` or `__run` modes is not a
-replacement for the supervisor. An isolated worker exiting is insufficient
-proof that Raft crashed.
+Restart and inspect the Computer service through its supervisor; internal
+`__service` and `__run` modes manage individual processes. Inspect supervisor
+status and logs when a worker exits.
 
 `ops/raft-stack.mjs status` is a convenience report. Its `up`, `down` and
 `install-agent` commands also manage services and should be used only when
@@ -50,12 +50,10 @@ reattaching or resetting a computer with existing agents, back up its state
 through an appropriate consistent procedure; changing its display name is not
 an identity migration.
 
-An older packaged-build report (Desktop 1.21.22/1.21.24) observed runtime
-probing fail with `child_failed` and `Cannot find module '/__service'` because a
-launcher mode was treated as a script path. The integration article covers the
-investigation. Treat this as a version-specific diagnostic clue, not a claim
-that all current Raft builds have that defect. Check the installed Computer
-version and report matching failures upstream.
+For `child_failed` with `Cannot find module '/__service'`, check the installed
+Computer version and launcher. This was observed in Desktop 1.21.22/1.21.24;
+see the [integration article](https://2bab.me/en/blog/2026-10-20-raft-runtime-slot/)
+for the version-specific investigation. Report matching failures upstream.
 
 ## Maka workspace after a reboot or move
 

@@ -37,8 +37,8 @@ authentication method.
 
 The standing prompt arrives through `_meta.systemPromptOverride` on session
 creation. It is stored until the first nonempty prompt. Settings-only prompts
-settle without calling the backend. Metadata text recovery is defensive
-compatibility; it is not evidence that Raft actually sends prompt text there.
+settle without calling the backend. Recognized text fields in prompt
+metadata are normalized into text blocks before the empty-prompt check.
 
 Model prefixes distinguish backends in Raft's machine-wide catalogue. Prefixes
 are checked against the agent profile and stripped before forwarding. Backend

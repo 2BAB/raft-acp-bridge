@@ -2,7 +2,7 @@ import { nonEmptyString } from "../../util.js";
 
 /**
  * Agy IDs encode effort in their suffix, so each entry advertises that effort.
- * Server discovery narrows known families to IDs the installed build offers.
+ * Server discovery supplies the IDs the installed build offers.
  * The default family supplies a fallback when discovery is unavailable;
  * GROK_SHIM_MODELS and GROK_SHIM_MODEL_FAMILIES can override that declaration.
  */
@@ -44,8 +44,7 @@ function effortOf(modelId, fallback = "medium") {
 /**
  * `gemini-4-argon` stays the default: it is the family agy itself starts a
  * session on, so a fresh agent opens on the model the backend would have picked.
- * Every other family in the table is only offered when the server is seen
- * serving it — see `knownModels`.
+ * Other installed models are supplied by discovery.
  */
 function selectedFamilies(env) {
   const configured = nonEmptyString(env.GROK_SHIM_MODEL_FAMILIES);
@@ -88,38 +87,26 @@ export function resolveModels(env = process.env) {
   return modelsForFamilies(selectedFamilies(env));
 }
 
-/**
- * Everything the shim could name, before the server has an opinion: an explicit
- * `GROK_SHIM_MODELS` list, else every family in the table. This is what gets
- * intersected with the probe, so discovery contributes only IDs the installed server reports.
- */
-export function knownModels(env = process.env) {
-  if (nonEmptyString(env.GROK_SHIM_MODELS)) return resolveModels(env);
-  const configured = nonEmptyString(env.GROK_SHIM_MODEL_FAMILIES);
-  const families = configured
-    ? configured
-        .split(",")
-        .map((entry) => entry.trim())
-        .filter((entry) => entry in AGY_MODEL_FAMILIES)
-    : Object.keys(AGY_MODEL_FAMILIES);
-  return modelsForFamilies(families.length > 0 ? families : Object.keys(AGY_MODEL_FAMILIES));
+/** Use the installed catalogue; explicit model settings act as filters. */
+export function discoveredModels(servedIds, env = process.env) {
+  const labels = new Map(modelsForFamilies(Object.keys(AGY_MODEL_FAMILIES)).map((model) => [model.modelId, model]));
+  const explicit = nonEmptyString(env.GROK_SHIM_MODELS);
+  if (explicit) {
+    const configured = resolveModels(env);
+    for (const model of configured) labels.set(model.modelId, model);
+  }
+  const allowed = explicit ? new Set(resolveModels(env).map((model) => model.modelId)) : null;
+  const families = nonEmptyString(env.GROK_SHIM_MODEL_FAMILIES)?.split(",").map((entry) => entry.trim()).filter(Boolean);
+  const ids = [...new Set(servedIds)].filter((id) => typeof id === "string" && id.length > 0)
+    .filter((id) => allowed ? allowed.has(id) : !families || families.some((family) => id === family || id.startsWith(`${family}-`)));
+  if (ids.length === 0) {
+    throw new Error("Antigravity returned no matching models; check the backend account and GROK_SHIM_MODELS / GROK_SHIM_MODEL_FAMILIES filters");
+  }
+  return ids.map((modelId) => {
+    if (labels.has(modelId)) return labels.get(modelId);
+    const effort = modelId.match(/-(low|medium|high|xhigh|max)$/)?.[1];
+    return { modelId, name: modelId, ...(effort ? { _meta: { reasoningEfforts: [effort] } } : {}) };
+  });
 }
-
-/**
- * Keep only the entries the server says it serves. The static catalogue is the
- * shim's opinion of a family; the probe is the server's. Where they disagree the
- * server wins, because an entry the backend rejects is worse than a missing one.
- *
- * Returns null when nothing matches, which is what a probe talking to a foreign
- * backend looks like; the caller then keeps the declared catalogue rather than
- * advertising families that server has never heard of.
- */
-export function servedModels(models, servedIds) {
-  if (!Array.isArray(servedIds) || servedIds.length === 0) return null;
-  const served = new Set(servedIds);
-  const kept = models.filter((model) => served.has(model.modelId));
-  return kept.length > 0 ? kept : null;
-}
-
 
 export { DEFAULT_MODEL_ID, AGY_MODEL_FAMILY };

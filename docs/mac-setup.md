@@ -14,6 +14,7 @@ cp .env.sample .env
 All settings are optional. Without `.env`, the existing paths and routing remain
 in effect. `.env` and `vendor/` are ignored by Git. Commit `.env.sample` when a
 new setting needs documentation; keep machine-specific values in `.env`.
+For the initial backend install and sign-in, follow [Backends](backends.md).
 
 Every Node executable entry loads the root `.env` before reading configuration:
 the `grok` CLI, `raft-stack`, `agy-models` and `doctor`. The loader does not change the task's
@@ -39,10 +40,10 @@ selected file must exist; the absent default root `.env` is optional.
 | Setting | Default / purpose |
 | --- | --- |
 | `AGY_ACP_BIN` | `~/Library/Application Support/agy-acp/agy_acp_server.par`; its matching `localharness_external` must be beside it |
-| `MAKA_BIN` | `maka` on `PATH`; ops also retain the `~/.local/bin/maka` fallback when unset |
+| `MAKA_BIN` | `maka` on `PATH`, then `~/.local/bin/maka` when unset (runtime and checks) |
 | `MAKA_WORKSPACE` | `~/Library/Application Support/Maka/workspaces/default`; workspace inspected by ops |
 | `MAKA_HOST_URL` | `ws://127.0.0.1:64150/runtime-host`; endpoint inspected by ops |
-| `SHIM_BIN` | `~/.local/bin/grok`; symlink managed by `raft-stack` and checked by `doctor` |
+| `SHIM_BIN` | `~/.local/bin/grok`; symlink managed by `install:cli` or `raft-stack`, checked by `doctor` |
 | `AGY_ACP_AUTH_METHOD` | optional method ID advertised by the backend |
 | `RAFT_APP_PATH` | `/Applications/Raft Desktop.app` |
 | `RAFT_HOME` | `~/.slock`; Raft Computer state inspected and passed to CLI launches |
@@ -63,21 +64,15 @@ state; it selects the state this tool reads and passes to Computer CLI commands.
    Raft Desktop and open it once to establish its Computer configuration.
 3. Create `.env` if paths differ from the defaults. Leave the profile unset for
    mixed-backend installations and set `GROK_SHIM_PROFILE` on each Raft agent.
-4. Link `bin/grok` at the configured `SHIM_BIN`. For the default location:
+4. Install the bridge and check the backend you chose:
 
    ```sh
-   mkdir -p ~/.local/bin
-   ln -sf "$PWD/bin/grok" ~/.local/bin/grok
+   npm run install:cli
+   npm run doctor -- --profile maka  # or agy
    ```
 
-5. Run the installation checks:
-
-   ```sh
-   npm run doctor -- --profile agy
-   npm run doctor -- --profile maka
-   # Or inspect both:
-   npm run doctor -- --profile all
-   ```
+   Put the install directory earlier on your login-shell `PATH`. Use
+   `--profile all` only when both backends are installed.
 
 `doctor` defaults to the configured `GROK_SHIM_PROFILE`, or `all` when unset.
 Exit code 0 means no installation errors, 1 means an `ERROR` needs attention,
@@ -94,6 +89,21 @@ Check the backend's service status and a real turn separately when ready.
 Restart Raft's Computer service after changing the installation or its login-shell
 `PATH`. There is no need to install the optional `raft-stack` login item just to
 use the shim with Raft's existing supervisor.
+
+## Coexisting with the real Grok CLI
+
+The bridge must be the first `grok` on Raft's login-shell `PATH`. If the default
+`~/.local/bin/grok` already belongs to the real CLI, the installer stops. Choose
+an unused location in `.env`, for example:
+
+```sh
+SHIM_BIN=~/.local/raft-acp-bridge/bin/grok
+```
+
+Put that directory before the real CLI's directory on the login-shell `PATH`,
+then rerun `npm run install:cli` and `doctor`. The bridge finds the real CLI
+later on `PATH`; `GROK_SHIM_REAL_GROK` can also specify it explicitly. Set
+`RAFT_GROK_BACKEND=shim` on bridge-backed Raft agents and restart Computer.
 
 ## Maintenance commands
 

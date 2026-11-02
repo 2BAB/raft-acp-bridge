@@ -24,7 +24,7 @@ function isExecutableFile(candidate) {
   }
 }
 
-function isBridgeEntry(file) {
+export function isBridgeEntry(file) {
   let descriptor;
   try {
     descriptor = fs.openSync(file, "r");

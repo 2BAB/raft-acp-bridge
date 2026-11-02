@@ -4,6 +4,8 @@
 import { createInterface } from "node:readline";
 
 const sessionId = "fake-session-1";
+const modelIds = process.env.FIXTURE_MODEL_IDS ? JSON.parse(process.env.FIXTURE_MODEL_IDS) : ["maka-one", "maka-two"];
+const currentModel = process.env.FIXTURE_CURRENT_MODEL ?? modelIds[0];
 /** A prompt containing this word answers slowly, so a turn can be caught busy. */
 const SLOW_MARKER = "SLOW";
 const SLOW_DELAY_MS = 400;
@@ -79,11 +81,13 @@ reader.on("line", (line) => {
                 id: "model",
                 name: "Model",
                 category: "model",
-                currentValue: "maka-one",
-                options: [
-                  { value: "maka-one", name: "Maka One" },
-                  { value: "maka-two", name: "Maka Two" },
-                ],
+                currentValue: currentModel,
+                options: modelIds.map((value) => ({ value, name: value })),
+              },
+              {
+                type: "select", id: "thinking_level", name: "Thinking level",
+                currentValue: "low",
+                options: [{ value: "low", name: "Low" }, { value: "high", name: "High" }],
               },
             ],
           },

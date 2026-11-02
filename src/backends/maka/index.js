@@ -3,13 +3,15 @@ import { createInterface } from "node:readline";
 
 import { nonEmptyString, recordValue } from "../../util.js";
 import { readConfig } from "../../config.js";
+import { makaExecutable } from "../../installation.js";
 
 /** Maka serves ACP v1 over stdio; one flag, no auth. */
 export function resolveMakaCommand(env = process.env) {
-  return { command: readConfig(env).makaBin, args: ["--acp"] };
+  const config = readConfig(env);
+  return { command: makaExecutable(config, env) ?? config.makaBin, args: ["--acp"] };
 }
 
-import { modelOption, entryFor } from "./models.js";
+import { modelOption, thinkingOption, entryFor } from "./models.js";
 export { MAKA_EFFORTS, MAKA_SENTINEL_MODEL, thinkingLevelFor } from "./models.js";
 
 /**
@@ -20,6 +22,15 @@ export { MAKA_EFFORTS, MAKA_SENTINEL_MODEL, thinkingLevelFor } from "./models.js
 export async function discoverMakaModels({ command, args = [], cwd, timeoutMs = 20_000, log = () => {}, env = process.env }) {
   const child = spawn(command, args, { cwd, stdio: ["pipe", "pipe", "pipe"], env, shell: false });
   const pending = new Map();
+  let transportError = null;
+  const failPending = (error) => {
+    transportError ||= { error: { code: -32000, message: error.message } };
+    for (const settle of pending.values()) settle(transportError);
+    pending.clear();
+  };
+  child.on("error", failPending);
+  child.on("close", () => failPending(new Error("backend exited before replying")));
+  child.stdin.on("error", failPending);
   let nextId = 1;
   let stderrTail = "";
   let probeSessionId = null;
@@ -54,6 +65,7 @@ export async function discoverMakaModels({ command, args = [], cwd, timeoutMs = 
 
   const request = (method, params) =>
     new Promise((resolve) => {
+      if (transportError) return resolve(transportError);
       const id = nextId++;
       const timer = setTimeout(() => {
         pending.delete(id);
@@ -63,7 +75,9 @@ export async function discoverMakaModels({ command, args = [], cwd, timeoutMs = 
         clearTimeout(timer);
         resolve(message);
       });
-      child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
+      try {
+        child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
+      } catch (error) { failPending(error); }
     });
 
   try {

@@ -11,7 +11,7 @@ export function modelOption(configOptions) {
   return (configOptions ?? []).find((option) => recordValue(option)?.id === "model") ?? null;
 }
 
-function thinkingOption(configOptions) {
+export function thinkingOption(configOptions) {
   return (configOptions ?? []).find((option) => recordValue(option)?.id === "thinking_level") ?? null;
 }
 

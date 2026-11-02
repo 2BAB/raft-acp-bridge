@@ -18,7 +18,7 @@
  */
 import '../src/bootstrap.js';
 import { readConfig, findExecutable } from '../src/config.js';
-import { computerCommand, computerProcessPattern, launchAgentPlist, makaExecutable } from '../src/installation.js';
+import { computerCommand, computerProcessPattern, installShim, launchAgentPlist, makaExecutable } from '../src/installation.js';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
@@ -212,14 +212,8 @@ const ensureDaemon = () => {
 };
 
 const ensureShim = () => {
-  if (shimState() === 'ok') return true;
-  const target = config.shimEntry;
-  fs.mkdirSync(path.dirname(GROK), { recursive: true });
-  try {
-    fs.rmSync(GROK);
-  } catch {}
-  fs.symlinkSync(target, GROK);
-  console.log(`  shim: linked ${GROK} -> ${target}`);
+  const result = installShim(config);
+  if (result.changed) console.log(`  shim: linked ${result.link} -> ${result.target}`);
   return true;
 };
 

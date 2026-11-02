@@ -1,9 +1,30 @@
 import fs from "node:fs";
 import path from "node:path";
 import { findExecutable } from "./config.js";
+import { isBridgeEntry } from "./realGrok.js";
+
+/** Install only into an unused location or replace another bridge entry. */
+export function installShim(config) {
+  const target = fs.realpathSync(config.shimEntry);
+  fs.accessSync(target, fs.constants.X_OK);
+  let existing;
+  try { existing = fs.lstatSync(config.shimBin); } catch (error) { if (error.code !== "ENOENT") throw error; }
+  if (existing) {
+    let resolved;
+    try { resolved = fs.realpathSync(config.shimBin); } catch { /* A stale symlink is still an existing entry. */ }
+    if (resolved === target) return { target, link: config.shimBin, changed: false };
+    if (!resolved || !isBridgeEntry(resolved)) {
+      throw new Error(`refusing to replace existing executable ${config.shimBin}; preserve it first and set GROK_SHIM_REAL_GROK to its new path, or choose an unused SHIM_BIN directory earlier on PATH`);
+    }
+    fs.unlinkSync(config.shimBin);
+  }
+  fs.mkdirSync(path.dirname(config.shimBin), { recursive: true });
+  fs.symlinkSync(target, config.shimBin);
+  return { target, link: config.shimBin, changed: true };
+}
 
 export function makaExecutable(config, env = process.env) {
-  // Preserve the old ops fallback when launchd has not captured the shell PATH.
+  // launchd may start without the user's local bin directory on PATH.
   return findExecutable(config.makaBin, env)
     ?? (!env.MAKA_BIN?.trim() ? findExecutable(path.join(config.home, ".local/bin/maka"), env) : null);
 }

@@ -30,7 +30,7 @@ export function checkInstallation({ env = process.env, profile = env.GROK_SHIM_P
   const onPath = findExecutable("grok", env);
   let detected = false;
   try { detected = onPath && fs.realpathSync(onPath) === fs.realpathSync(target); } catch { /* Missing entry. */ }
-  add("shim-path", detected ? "ok" : "warn", detected ? onPath : "PATH does not resolve grok to this checkout; check the login-shell PATH before restarting Raft");
+  add("shim-path", detected ? "ok" : "error", detected ? onPath : "PATH does not resolve grok to this checkout; put its install directory earlier on the login-shell PATH before restarting Raft");
   let owner;
   try { owner = JSON.parse(fs.readFileSync(path.join(config.raftHome, "computer/host-lifecycle-owner.json"), "utf8")).owner; } catch { /* First install. */ }
   add("raft-home", owner ? "ok" : "warn", `${config.raftHome}; owner=${owner || "unset (open Raft once)"}`);

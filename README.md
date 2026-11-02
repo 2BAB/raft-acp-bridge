@@ -9,27 +9,39 @@ JavaScript uses Node built-ins only. Backend executables are installed separatel
 
 ## Install on a Mac
 
-Install Node >=22 and your backend.
+Install [Raft Desktop](https://github.com/botiverse/raft-source), Node >=22,
+and **one** backend using the [Maka](docs/backends.md#maka) or
+[Antigravity](docs/backends.md#antigravity-acp) setup instructions. Maka also has
+its own Node version and ACP capability requirements; check that guide first.
+
 From this checkout:
 
 ```sh
-cp .env.sample .env              # optional; edit paths only where needed
-mkdir -p ~/.local/bin
-ln -sf "$PWD/bin/grok" ~/.local/bin/grok
-npm run doctor -- --profile all  # or agy / maka for one backend
+npm run install:cli
+npm run doctor -- --profile maka  # use agy for Antigravity
 ```
 
-Restart Raft's Computer service after installing the shim or changing the
-login-shell `PATH`. In Raft, select the **Grok Build** runtime and set each
-agent's environment:
+The installer links `bin/grok` at `~/.local/bin/grok`. It preserves existing
+non-bridge programs and stops if that location is occupied. Put `~/.local/bin`
+earlier on your login-shell `PATH` (for zsh, in `~/.zprofile`):
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+If paths differ, copy `.env.sample` to `.env`, edit those paths and rerun the
+commands. `SHIM_BIN` selects another installation location; see
+[coexisting with Grok](docs/mac-setup.md#coexisting-with-the-real-grok-cli).
+
+Restart Raft's Computer service. In Raft, select the **Grok Build** runtime
+and set each agent's environment:
 
 | Backend | Agent environment | Model ID prefix |
 | --- | --- | --- |
-| Antigravity | `GROK_SHIM_PROFILE=agy` | `agy_` |
-| Maka | `GROK_SHIM_PROFILE=maka` | `maka_` |
+| Antigravity | `RAFT_GROK_BACKEND=shim`, `GROK_SHIM_PROFILE=agy` | `agy_` |
+| Maka | `RAFT_GROK_BACKEND=shim`, `GROK_SHIM_PROFILE=maka` | `maka_` |
 
-If a real Grok CLI is installed, also set `RAFT_GROK_BACKEND=shim` to force this
-shim for either profile. The profile chooses the backend.
+Send a short message and confirm that the agent returns a reply.
 
 Without `.env`, existing defaults remain in effect. Process and per-agent
 variables override `.env`. Relative path settings use the configuration file's
@@ -59,7 +71,7 @@ shim searches `PATH` and skips its own entry. Commands it does not implement,
 such as `grok login`, are delegated when the real CLI is available.
 
 With no profile, ACP initialization can discover the machine-wide backend
-catalogue, but real session creation requires an explicit profile. The model
+catalogue of installed backends, but real session creation requires an explicit profile. The model
 prefix must match that profile; the backend receives the unprefixed ID. Legacy
 unprefixed IDs are treated as agy.
 
@@ -90,8 +102,8 @@ Machine paths are listed in [.env.sample](.env.sample) and the
 | `GROK_SHIM_PROFILE` | `agy` or `maka`, set per agent |
 | `RAFT_GROK_BACKEND` | choose shim or real CLI as above |
 | `GROK_SHIM_BACKEND_BIN` / `GROK_SHIM_BACKEND_ARGS` | custom backend executable and JSON-array or whitespace-separated arguments |
-| `GROK_SHIM_MODELS` | declared catalogue, comma-separated `id:Label` |
-| `GROK_SHIM_MODEL_FAMILIES` | narrow the agy families considered by discovery |
+| `GROK_SHIM_MODELS` | model filter and fallback catalogue, comma-separated `id:Label` |
+| `GROK_SHIM_MODEL_FAMILIES` | filter the agy catalogue by family |
 | `GROK_SHIM_PROBE=off` | skip agy discovery and use the declared catalogue |
 | `GROK_SHIM_INTERJECT=reject` | reject busy messages instead of queueing them |
 | `GROK_SHIM_QUEUE_NOTICE` | replace the queue notice; `off` disables it |
