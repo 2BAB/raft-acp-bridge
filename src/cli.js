@@ -24,7 +24,7 @@ Environment:
                           Unset: the real CLI when found, else this shim.
   GROK_SHIM_REAL_GROK     path to the real grok binary (skips the PATH scan)
   GROK_SHIM_BACKEND_BIN   backend command (default: the Antigravity ACP server)
-  GROK_SHIM_BACKEND_ARGS  space-separated backend args
+  GROK_SHIM_BACKEND_ARGS  JSON-array or whitespace-separated backend args
   AGY_ACP_BIN             path to agy_acp_server.par
   AGY_ACP_AUTH_METHOD     optional backend authentication method id
   GROK_SHIM_INTERJECT     "queue" (default): deliver busy messages at the turn

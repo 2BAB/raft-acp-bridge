@@ -89,7 +89,7 @@ Machine paths are listed in [.env.sample](.env.sample) and the
 | --- | --- |
 | `GROK_SHIM_PROFILE` | `agy` or `maka`, set per agent |
 | `RAFT_GROK_BACKEND` | choose shim or real CLI as above |
-| `GROK_SHIM_BACKEND_BIN` / `GROK_SHIM_BACKEND_ARGS` | custom backend executable and space-separated arguments |
+| `GROK_SHIM_BACKEND_BIN` / `GROK_SHIM_BACKEND_ARGS` | custom backend executable and JSON-array or whitespace-separated arguments |
 | `GROK_SHIM_MODELS` | declared catalogue, comma-separated `id:Label` |
 | `GROK_SHIM_MODEL_FAMILIES` | narrow the agy families considered by discovery |
 | `GROK_SHIM_PROBE=off` | skip agy discovery and use the declared catalogue |

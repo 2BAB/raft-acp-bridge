@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 
 import { nonEmptyString, recordValue } from "../../util.js";
-import { readConfig, resolveCommand } from "../../config.js";
+import { readConfig, resolveCommand, backendArguments } from "../../config.js";
 
 /**
  * The Antigravity ACP server is a packaged executable (`agy_acp_server.par`,
@@ -25,9 +25,7 @@ export function resolveAgyAcpCommand(env = process.env) {
 export function resolveBackend(env = process.env) {
   const command = nonEmptyString(env.GROK_SHIM_BACKEND_BIN);
   if (command) {
-    const args = nonEmptyString(env.GROK_SHIM_BACKEND_ARGS)
-      ? env.GROK_SHIM_BACKEND_ARGS.split(" ").filter(Boolean)
-      : [];
+    const args = backendArguments(env.GROK_SHIM_BACKEND_ARGS);
     return { command: resolveCommand(command, env), args, kind: "custom" };
   }
   return { ...resolveAgyAcpCommand(env), kind: "agy-acp" };

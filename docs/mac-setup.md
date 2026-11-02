@@ -26,9 +26,9 @@ machine file. Most empty path settings select their normal default.
 Path settings expand `~` and `~/`. Relative paths use the directory containing
 the selected `.env`, even when Raft starts the agent inside another project.
 Bare command names such as `maka` use `PATH`. Shell interpolation such
-as `${HOME}`, `$HOME` or `$(command)` is not evaluated. Backend argument strings
-retain their existing space-separated syntax; use absolute arguments when a
-backend expects file paths.
+as `${HOME}`, `$HOME` or `$(command)` is not evaluated. Custom backend arguments accept a JSON string array, preserving spaces inside
+each argument. Legacy whitespace-separated strings are also accepted. File
+arguments are passed unchanged; use absolute paths when the backend needs them.
 
 An alternate file can be selected with `SHIM_ENV_FILE` in the process environment.
 A relative `SHIM_ENV_FILE` is resolved from the configuration root.

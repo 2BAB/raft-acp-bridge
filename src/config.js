@@ -10,6 +10,18 @@ export const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
 
 const value = (env, key, fallback) => env[key]?.trim() || fallback;
 
+export function backendArguments(input) {
+  const text = input?.trim();
+  if (!text) return [];
+  if (!text.startsWith("[")) return text.split(/\s+/);
+  let args;
+  try { args = JSON.parse(text); } catch { throw new Error("GROK_SHIM_BACKEND_ARGS must be a valid JSON string array"); }
+  if (!Array.isArray(args) || !args.every((arg) => typeof arg === "string")) {
+    throw new Error("GROK_SHIM_BACKEND_ARGS must contain strings only");
+  }
+  return args;
+}
+
 export function configurationRoot(env = process.env) {
   return resolvePath(value(env, "SHIM_CONFIG_ROOT", REPO_ROOT), { home: env.HOME || os.homedir(), base: REPO_ROOT });
 }

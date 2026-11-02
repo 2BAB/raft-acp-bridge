@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { REPO_ROOT, loadRepositoryEnv, normalizePathEnv, readConfig } from "../src/config.js";
+import { REPO_ROOT, loadRepositoryEnv, normalizePathEnv, readConfig, backendArguments } from "../src/config.js";
 import { computerCommand, computerProcessPattern, launchAgentPlist } from "../src/installation.js";
 import { checkInstallation } from "../src/doctor.js";
 import { startShim } from "./harness.mjs";
@@ -81,7 +81,7 @@ test("dotenv backend configuration reaches an actual ACP round trip", async (t) 
   const fixture = path.join(REPO_ROOT, "fixtures/fake-acp-backend.mjs");
   fs.symlinkSync(process.execPath, path.join(directory, "node"));
   const file = path.join(directory, ".env");
-  fs.writeFileSync(file, `GROK_SHIM_BACKEND_BIN=./node\nGROK_SHIM_BACKEND_ARGS=${fixture}\nGROK_SHIM_ENVIRONMENT=off\n`);
+  fs.writeFileSync(file, `GROK_SHIM_BACKEND_BIN=./node\nGROK_SHIM_BACKEND_ARGS=${JSON.stringify([fixture])}\nGROK_SHIM_ENVIRONMENT=off\n`);
   const shim = await startShim({ env: { SHIM_ENV_FILE: file, GROK_SHIM_BACKEND_BIN: undefined, GROK_SHIM_BACKEND_ARGS: undefined, GROK_SHIM_ENVIRONMENT: undefined } });
   try {
     await shim.request("initialize", { protocolVersion: 1 });
@@ -90,6 +90,13 @@ test("dotenv backend configuration reaches an actual ACP round trip", async (t) 
     assert.equal(reply.result.stopReason, "end_turn");
     assert.equal(shim.logs().find((entry) => entry.method === "session/prompt").text, "hello");
   } finally { shim.close(); }
+});
+
+test("custom backend arguments support spaced paths without invoking a shell", () => {
+  assert.deepEqual(backendArguments('--flag value'), ['--flag', 'value']);
+  assert.deepEqual(backendArguments('["/path with spaces/backend.mjs","literal $(false)"]'), ['/path with spaces/backend.mjs', 'literal $(false)']);
+  assert.throws(() => backendArguments('[1]'), /strings only/);
+  assert.throws(() => backendArguments('[broken'), /valid JSON/);
 });
 
 test("Computer CLI works without a source checkout and explicit source setups stay supported", (t) => {

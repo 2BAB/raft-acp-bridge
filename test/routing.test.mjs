@@ -4,12 +4,13 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import os from "node:os";
+import { fileURLToPath } from "node:url";
 
 import { agyBackendEnv } from "../src/backends/agy/index.js";
 import { resolveProfile } from "../src/profiles.js";
 
-const BIN = new URL("../bin/grok", import.meta.url).pathname;
-const FAKE_REAL = new URL("../fixtures/fake-real-grok.mjs", import.meta.url).pathname;
+const BIN = fileURLToPath(new URL("../bin/grok", import.meta.url));
+const FAKE_REAL = fileURLToPath(new URL("../fixtures/fake-real-grok.mjs", import.meta.url));
 
 function run(args, env = {}) {
   const result = spawnSync(BIN, args, {

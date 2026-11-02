@@ -5,9 +5,10 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import test from "node:test";
 import os from "node:os";
+import { fileURLToPath } from "node:url";
 
 const run = promisify(execFile);
-const BIN = new URL("../bin/grok", import.meta.url).pathname;
+const BIN = fileURLToPath(new URL("../bin/grok", import.meta.url));
 
 test("`grok --version` prints a version line", async () => {
   const { stdout } = await run(BIN, ["--version"], { env: { ...process.env, SHIM_ENV_FILE: os.devNull, SHIM_CONFIG_ROOT: "", SHIM_EXTENSION_MODULE: "" } });

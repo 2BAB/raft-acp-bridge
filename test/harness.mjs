@@ -1,9 +1,10 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import os from "node:os";
+import { fileURLToPath } from "node:url";
 
-const BIN = new URL("../bin/grok", import.meta.url).pathname;
-const FIXTURE = new URL("../fixtures/fake-acp-backend.mjs", import.meta.url).pathname;
+const BIN = fileURLToPath(new URL("../bin/grok", import.meta.url));
+const FIXTURE = fileURLToPath(new URL("../fixtures/fake-acp-backend.mjs", import.meta.url));
 const REQUEST_TIMEOUT_MS = 5_000;
 
 /** Boots `grok agent stdio` against the fixture backend and speaks to it. */
@@ -15,7 +16,7 @@ export async function startShim({ env = {}, bin = BIN } = {}) {
       SHIM_ENV_FILE: os.devNull, SHIM_CONFIG_ROOT: "", SHIM_EXTENSION_MODULE: "",
       RAFT_GROK_BACKEND: "agy",
       GROK_SHIM_BACKEND_BIN: process.execPath,
-      GROK_SHIM_BACKEND_ARGS: FIXTURE,
+      GROK_SHIM_BACKEND_ARGS: JSON.stringify([FIXTURE]),
       ...env,
     },
   });

@@ -17,8 +17,8 @@ export { MAKA_EFFORTS, MAKA_SENTINEL_MODEL, thinkingLevelFor } from "./models.js
  * initialize result. So a short probe session is opened, read, and closed —
  * `session/close` included so the Host does not keep an orphan entry.
  */
-export async function discoverMakaModels({ command, args = [], cwd, timeoutMs = 20_000, log = () => {} }) {
-  const child = spawn(command, args, { cwd, stdio: ["pipe", "pipe", "pipe"], env: process.env, shell: false });
+export async function discoverMakaModels({ command, args = [], cwd, timeoutMs = 20_000, log = () => {}, env = process.env }) {
+  const child = spawn(command, args, { cwd, stdio: ["pipe", "pipe", "pipe"], env, shell: false });
   const pending = new Map();
   let nextId = 1;
   let stderrTail = "";

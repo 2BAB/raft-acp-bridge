@@ -3,7 +3,7 @@ import { MAKA_EFFORTS, MAKA_SENTINEL_MODEL, discoverMakaModels, resolveMakaComma
 import { DEFAULT_MODEL_ID, knownModels, resolveModels, servedModels } from "./backends/agy/models.js";
 import { splitModelPrefix, withModelPrefix } from "./models.js";
 import { nonEmptyString } from "./util.js";
-import { resolveCommand } from "./config.js";
+import { resolveCommand, backendArguments } from "./config.js";
 
 /**
  * One Raft runtime slot (`grok`), several possible backends. Raft spawns one
@@ -29,9 +29,7 @@ export async function resolveProfile(env = process.env, log = () => {}) {
 async function resolveBaseProfile(env, log) {
   const custom = nonEmptyString(env.GROK_SHIM_BACKEND_BIN);
   if (custom) {
-    const args = nonEmptyString(env.GROK_SHIM_BACKEND_ARGS)
-      ? env.GROK_SHIM_BACKEND_ARGS.split(" ").filter(Boolean)
-      : [];
+    const args = backendArguments(env.GROK_SHIM_BACKEND_ARGS);
     return {
       kind: "custom",
       backend: { command: resolveCommand(custom, env), args },
@@ -51,7 +49,7 @@ async function resolveBaseProfile(env, log) {
   }
   if (requested === "maka") {
     const backend = resolveMakaCommand(env);
-    const discovered = await discoverMakaModels({ ...backend, cwd: process.cwd(), log });
+    const discovered = await discoverMakaModels({ ...backend, cwd: process.cwd(), log, env });
     const bare = discovered?.models?.length
       ? discovered.models
       : [{ modelId: MAKA_SENTINEL_MODEL, name: "Maka default", _meta: { reasoningEfforts: MAKA_EFFORTS } }];
@@ -98,6 +96,7 @@ async function agyUnionProfile(env, log, { explicit }) {
     ? null
     : await discoverMakaModels({
         ...resolveMakaCommand(env),
+        env,
         cwd: process.cwd(),
         log,
         timeoutMs: 8000,
