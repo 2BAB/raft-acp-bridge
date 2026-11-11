@@ -79,3 +79,25 @@ Antigravity CLI. The standalone server queues busy messages. Switching to
 `node ops/agy-models.mjs` creates and closes a temporary ACP session to inspect
 its catalogue. `--probe` also tests model selection. `--model <id> --prompt`
 makes a real model call; run it only when authorized for that service.
+
+### Antigravity usage in the Raft Grok panel
+
+The bridge answers `_x.ai/billing` by running the configured Antigravity CLI's
+`--print /usage --output-format json`. This is a native command report, not a
+model turn. No OAuth token is read by the bridge; authentication remains with
+agy. The query disables CLI auto-updates, has a 15-second deadline and a 1 MiB
+output limit. Invalid or unavailable reports fail explicitly instead of showing
+zero usage. No account email or subscription tier is fabricated.
+
+The current OAR Grok reader consumes one included-usage percentage. The panel
+therefore shows the **more constrained Gemini weekly or five-hour window**,
+with its actual reset time and a label identifying the selected window. This is
+a shared Gemini quota, not a per-Carbon counter. Claude/GPT quota is not represented
+by this bar. Use `agy --print /usage --output-format json` for all four buckets.
+An expired window's reset does not guarantee headroom in the other window.
+
+Only the Antigravity profile implements this mapping. Maka, custom backends and
+the real Grok CLI retain their existing behavior. Existing sessions need not be
+restarted: refresh the Raft account-usage panel after its cooldown expires.
+The UI still calls the runtime Grok Build. Standalone ACP installations also
+need an installed Antigravity CLI for this native quota query.

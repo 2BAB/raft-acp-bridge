@@ -4,6 +4,7 @@ import { loadExtension } from "./extensions.js";
 import { delegateToRealGrok, resolveRealGrok } from "./realGrok.js";
 import { LineChannel } from "./rpc.js";
 import { Shim } from "./shim.js";
+import { readAgyBilling } from "./backends/agy/usage.js";
 
 const SHIM_VERSION = "0.3.0";
 const CLI_VERSION_LINE = `grok 0.9.0 (raft-acp-bridge ${SHIM_VERSION})`;
@@ -151,6 +152,7 @@ async function startStdioServer() {
     explicitProfile: profile.explicitProfile !== false,
     lifecycle,
     authMethod: profile.authMethod,
+    readAccountUsage: profile.prefixKind === "agy" ? () => readAgyBilling(env) : null,
   });
   const client = new LineChannel({
     input: process.stdin,

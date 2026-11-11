@@ -66,6 +66,7 @@ const MISSING_SESSION = {
  */
 export class Shim {
   #log;
+  #readAccountUsage;
   #backendCommand;
   #backendArgs;
   #backendEnv;
@@ -97,7 +98,7 @@ export class Shim {
   #authMethod;
   #exiting = false;
 
-  constructor({ backend, backendEnv, models, log, interjectMode = "queue", queueNotice, environment = true, modelSelection = "set-model", currentModelId = null, prefixKind = null, explicitProfile = true, steerVia = "queue", resumeVia = SESSION_LOAD, lifecycle = {}, authMethod = null }) {
+  constructor({ backend, backendEnv, models, log, interjectMode = "queue", queueNotice, environment = true, modelSelection = "set-model", currentModelId = null, prefixKind = null, explicitProfile = true, steerVia = "queue", resumeVia = SESSION_LOAD, lifecycle = {}, authMethod = null, readAccountUsage = null }) {
     this.#backendCommand = backend.command;
     this.#backendArgs = backend.args;
     // Profiles can supply the environment for their backend process.
@@ -105,6 +106,7 @@ export class Shim {
     this.#lifecycle = lifecycle;
     this.#authMethod = authMethod;
     this.#models = models;
+    this.#readAccountUsage = readAccountUsage;
     this.#log = log;
     this.#interjectMode = interjectMode;
     // undefined means "use the built-in text"; null means "stay quiet".
@@ -454,6 +456,19 @@ export class Shim {
 
   #onClientRequest(message) {
     const method = message.method;
+
+    if (this.#readAccountUsage && method === "_x.ai/billing") {
+      Promise.resolve().then(() => this.#readAccountUsage()).then(
+        result => this.#client.respond(message.id, result),
+        () => this.#client.fail(message.id, -32603, "Antigravity usage query failed"),
+      );
+      return;
+    }
+    if (this.#readAccountUsage && method === "_x.ai/auth/info") {
+      // /usage does not report account identity; do not invent or expose one.
+      this.#client.respond(message.id, {});
+      return;
+    }
 
     if (method === SET_MODEL_METHOD) {
       const params = { ...(message.params ?? {}) };
