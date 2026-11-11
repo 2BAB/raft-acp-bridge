@@ -39,7 +39,8 @@ selected file must exist; the absent default root `.env` is optional.
 
 | Setting | Default / purpose |
 | --- | --- |
-| `AGY_ACP_BIN` | `~/Library/Application Support/agy-acp/agy_acp_server.par`; its matching `localharness_external` must be beside it |
+| `AGY_CLI_BIN` | Official CLI from `PATH` or `~/.local/bin/agy` |
+| `AGY_ACP_BIN` | Legacy server override. Keep its matching `localharness_external` beside it |
 | `MAKA_BIN` | `maka` on `PATH`, then `~/.local/bin/maka` when unset (runtime and checks) |
 | `MAKA_WORKSPACE` | `~/Library/Application Support/Maka/workspaces/default`; workspace inspected by ops |
 | `MAKA_HOST_URL` | `ws://127.0.0.1:64150/runtime-host`; endpoint inspected by ops |
@@ -48,7 +49,7 @@ selected file must exist; the absent default root `.env` is optional.
 | `RAFT_APP_PATH` | `/Applications/Raft Desktop.app` |
 | `RAFT_HOME` | `~/.slock`; Raft Computer state inspected and passed to CLI launches |
 | `RAFT_COMPUTER_BIN` | `~/.local/bin/raft-computer`; explicit configuration takes precedence over source mode |
-| `RAFT_SOURCE` | Optional source checkout. Legacy source builds at `~/Desktop/code/active/raft-source` keep their launch command when present; otherwise ops use the installed Computer CLI |
+| `RAFT_SOURCE` | Path to a Raft source checkout when using a source build of Computer |
 
 `MAKA_WORKSPACE` and `MAKA_HOST_URL` configure this repository's ops checks. They
 do not move Maka's data or reconfigure its Runtime Host. Configure Maka itself
@@ -59,9 +60,8 @@ state; it selects the state this tool reads and passes to Computer CLI commands.
 
 1. Install Node >=22. Put Node on the
    login shell's `PATH`; `bin/grok` also keeps its existing macOS installer fallbacks.
-2. Install the backend for this Mac's CPU. Keep the agy server and helper from
-   the same release together. Complete backend sign-in on this Mac. Install
-   Raft Desktop and open it once to establish its Computer configuration.
+2. Follow the [backend setup guide](backends.md) for this Mac. Install Raft
+   Desktop and open it once to establish its Computer configuration.
 3. Create `.env` if paths differ from the defaults. Leave the profile unset for
    mixed-backend installations and set `GROK_SHIM_PROFILE` on each Raft agent.
 4. Install the bridge and check the backend you chose:

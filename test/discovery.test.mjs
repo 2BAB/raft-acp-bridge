@@ -86,3 +86,35 @@ test("a successful agy probe with no models stays distinguishable from a failed 
     env: { ...process.env, FIXTURE_MODEL_IDS: "[]" } });
   assert.deepEqual(discovered.ids, []);
 });
+
+test("official agy profile discovers runnable variants, resumes, and steers through concurrent prompts", async (t) => {
+  const directory = scratch(t);
+  const backend = path.join(directory, "agy");
+  fs.writeFileSync(backend,
+    `#!${process.execPath}\nif (process.argv[2] !== "acp") process.exit(1);\nawait import(${JSON.stringify(new URL("../fixtures/fake-acp-backend.mjs", import.meta.url).href)});\n`,
+    { mode: 0o755 });
+  const modelId = "claude-sonnet-5-5-medium";
+  const shim = await startShim({ env: {
+    GROK_SHIM_BACKEND_BIN: undefined, GROK_SHIM_BACKEND_ARGS: undefined,
+    GROK_SHIM_PROFILE: "agy", AGY_CLI_BIN: backend, AGY_ACP_BIN: "",
+    FIXTURE_NATIVE_AGY: "1", FIXTURE_MODEL_IDS: JSON.stringify([modelId]),
+  } });
+  try {
+    const initialized = await shim.request("initialize", { protocolVersion: 1 });
+    assert.deepEqual(initialized.result._meta.modelState.availableModels.map((model) => model.modelId), [`agy_${modelId}`]);
+    const params = { cwd: directory, mcpServers: [] };
+    const missing = await shim.request("session/load", { ...params, sessionId: "missing" });
+    assert.match(missing.error.message, /session not found/);
+    const sessionId = "live-native";
+    const loaded = await shim.request("session/load", { ...params, sessionId });
+    assert.equal(loaded.result.sessionId, sessionId);
+    assert.equal(shim.logs().filter((entry) => entry.method === "session/resume").length, 2);
+    const turn = shim.request("session/prompt", { sessionId, prompt: [{ type: "text", text: "SLOW original" }] });
+    await shim.waitFor((message) => message.params?.method === "session/prompt");
+    const interject = shim.request("_x.ai/interject", { sessionId, text: "SLOW steer" });
+    await shim.waitFor((message) => message.params?.text === "SLOW steer");
+    assert.equal((await turn).result.stopReason, "end_turn");
+    assert.ok(shim.messages.some((message) => message.params?.update?.content?.text === "received:SLOW steer"));
+    assert.deepEqual((await interject).result, {});
+  } finally { shim.close(); }
+});

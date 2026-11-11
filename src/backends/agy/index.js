@@ -5,16 +5,16 @@ import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 
 import { nonEmptyString, recordValue } from "../../util.js";
-import { readConfig, resolveCommand, backendArguments } from "../../config.js";
+import { readConfig, resolveCommand, backendArguments, findExecutable } from "../../config.js";
 
-/**
- * The Antigravity ACP server is a packaged executable (`agy_acp_server.par`,
- * hundreds of MB) that must stay beside its matching helper binary. Extract
- * the Google distribution and set `AGY_ACP_BIN`, or install the pair at the
- * default location.
- */
 export function resolveAgyAcpCommand(env = process.env) {
-  return { command: readConfig(env).agyBin, args: [] };
+  const config = readConfig(env);
+  const legacy = { command: config.agyBin, args: [], kind: "agy-acp" };
+  if (env.AGY_ACP_BIN?.trim()) return legacy;
+  const native = findExecutable(config.agyCli, env)
+    ?? (!env.AGY_CLI_BIN?.trim() ? findExecutable(path.join(config.home, ".local/bin/agy"), env) : null);
+  if (!native && !env.AGY_CLI_BIN?.trim() && findExecutable(legacy.command, env)) return legacy;
+  return { command: native ?? config.agyCli, args: ["acp"], kind: "agy-cli" };
 }
 
 /**
@@ -28,7 +28,7 @@ export function resolveBackend(env = process.env) {
     const args = backendArguments(env.GROK_SHIM_BACKEND_ARGS);
     return { command: resolveCommand(command, env), args, kind: "custom" };
   }
-  return { ...resolveAgyAcpCommand(env), kind: "agy-acp" };
+  return resolveAgyAcpCommand(env);
 }
 
 /** Backend authentication and credential storage remain under its own control. */
@@ -39,10 +39,10 @@ export function agyBackendEnv(env = process.env) {
 /** Discovery is cached against the installed server executable. */
 const PROBE_CACHE = path.join(os.tmpdir(), "raft-acp-bridge-agy-models.json");
 
-function cacheKey(command) {
+function cacheKey(command, args) {
   try {
     const stats = fs.statSync(command);
-    return `${command}|${stats.size}|${Math.floor(stats.mtimeMs)}`;
+    return JSON.stringify([command, args, stats.size, Math.floor(stats.mtimeMs)]);
   } catch {
     return null;
   }
@@ -67,7 +67,7 @@ function writeCached(key, result) {
 }
 
 export async function discoverAgyModels({ command, args = [], cwd, timeoutMs = 15_000, log = () => {}, env = process.env }) {
-  const key = cacheKey(command);
+  const key = cacheKey(command, args);
   const cached = key ? readCached(key) : null;
   if (cached) {
     log(`agy probe: ${cached.ids.length} model(s) (cached)`);
@@ -151,21 +151,17 @@ export async function discoverAgyModels({ command, args = [], cwd, timeoutMs = 1
     const created = await request("session/new", { cwd, mcpServers: [] });
     const result = recordValue(created.result);
     sessionId = nonEmptyString(result?.sessionId);
-    const option = (result?.configOptions ?? [])
-      .map((entry) => recordValue(entry))
-      .find((entry) => entry?.id === "model");
-    if (!sessionId || !option) {
+    const models = agyModelsFromSession(result);
+    if (!sessionId || !models) {
       log(`agy probe: session/new returned no model option${stderrTail ? ` (${stderrTail.trim().slice(-120)})` : ""}`);
       return null;
     }
-    const ids = (option.options ?? [])
-      .map((entry) => nonEmptyString(recordValue(entry)?.value))
-      .filter((id) => id !== null);
-    log(`agy probe: ${ids.length} model(s), current ${String(option.currentValue)}`);
+    const ids = models.availableModels.map((model) => model.modelId);
+    log(`agy probe: ${ids.length} model(s), current ${String(models.currentModelId)}`);
     // The probe session would otherwise linger in the server's store.
     await request("session/close", { sessionId });
     sessionId = null;
-    const discovered = { ids, currentModelId: nonEmptyString(option.currentValue) };
+    const discovered = { ids, currentModelId: models.currentModelId };
     if (key) writeCached(key, discovered);
     return discovered;
   } catch (error) {
@@ -175,4 +171,22 @@ export async function discoverAgyModels({ command, args = [], cwd, timeoutMs = 1
     if (sessionId) request("session/close", { sessionId }).catch(() => {});
     stop();
   }
+}
+
+/** The CLI exposes runnable model IDs and thinking variants in `models`. */
+export function agyModelsFromSession(result) {
+  const models = recordValue(result?.models);
+  if (Array.isArray(models?.availableModels)) {
+    return {
+      availableModels: models.availableModels.filter((model) => nonEmptyString(model?.modelId)),
+      currentModelId: nonEmptyString(models.currentModelId),
+    };
+  }
+  const option = (result?.configOptions ?? []).find((entry) => entry?.id === "model");
+  if (!option) return null;
+  return {
+    availableModels: (option.options ?? []).filter((entry) => nonEmptyString(entry?.value))
+      .map((entry) => ({ modelId: entry.value, name: entry.name })),
+    currentModelId: nonEmptyString(option.currentValue),
+  };
 }

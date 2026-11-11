@@ -82,20 +82,20 @@ export function readConfig(env = process.env) {
   const envFile = envFilePath(env);
   const at = (key, fallback) => resolvePath(value(env, key, fallback), { home, base: path.dirname(envFile) });
   const dataDir = at("SHIM_DATA_DIR", path.join(home, "Library/Application Support/raft-acp-bridge"));
-  const raftSource = at("RAFT_SOURCE", path.join(home, "Desktop/code/active/raft-source"));
+  const raftSource = env.RAFT_SOURCE?.trim() ? at("RAFT_SOURCE", "") : null;
   return {
     repoRoot: REPO_ROOT, configRoot: configurationRoot(env), home, envFile,
     envFileExplicit: Boolean(env.SHIM_ENV_FILE?.trim()), dataDir,
     shimEntry: path.join(configurationRoot(env), "bin/grok"),
     extensionModule: env.SHIM_EXTENSION_MODULE?.trim()
       ? at("SHIM_EXTENSION_MODULE", "") : null,
-    ...agySettings({ env, home, at }),
+    ...agySettings({ env, home, at, command: (input) => resolveCommand(input, env) }),
     ...makaSettings({ env, home, at, command: (input) => resolveCommand(input, env) }),
     shimBin: at("SHIM_BIN", path.join(home, ".local/bin/grok")),
     raftHome: at("RAFT_HOME", path.join(home, ".slock")),
     raftApp: at("RAFT_APP_PATH", "/Applications/Raft Desktop.app"),
     raftSource,
-    raftComputerScript: path.join(raftSource, "packages/computer/dist/raft-computer.js"),
+    raftComputerScript: raftSource ? path.join(raftSource, "packages/computer/dist/raft-computer.js") : null,
     raftComputerBin: resolveCommand(value(env, "RAFT_COMPUTER_BIN", path.join(home, ".local/bin/raft-computer")), env),
     launchAgentFile: path.join(home, "Library/LaunchAgents/com.2bab.raft-stack.plist"),
     launchAgentLog: path.join(home, "Library/Logs/raft-stack.log"),
@@ -110,7 +110,7 @@ export function normalizePathEnv(env = process.env) {
     "RAFT_HOME", "RAFT_SOURCE", "RAFT_APP_PATH", "MAKA_WORKSPACE", "GEMINI_HOME"]) {
     if (env[key]?.trim()) env[key] = resolvePath(env[key].trim(), { home, base });
   }
-  for (const key of ["MAKA_BIN", "RAFT_COMPUTER_BIN", "GROK_SHIM_BACKEND_BIN", "GROK_SHIM_REAL_GROK"]) {
+  for (const key of ["AGY_CLI_BIN", "MAKA_BIN", "RAFT_COMPUTER_BIN", "GROK_SHIM_BACKEND_BIN", "GROK_SHIM_REAL_GROK"]) {
     if (env[key]?.trim()) env[key] = resolveCommand(env[key].trim(), env);
   }
 }

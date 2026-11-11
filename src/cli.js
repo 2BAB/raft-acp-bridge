@@ -23,17 +23,17 @@ Environment:
   RAFT_GROK_BACKEND       "shim" (or "agy") forces this shim; "grok" forces the real CLI.
                           Unset: the real CLI when found, else this shim.
   GROK_SHIM_REAL_GROK     path to the real grok binary (skips the PATH scan)
-  GROK_SHIM_BACKEND_BIN   backend command (default: the Antigravity ACP server)
+  GROK_SHIM_BACKEND_BIN   custom ACP backend command
   GROK_SHIM_BACKEND_ARGS  JSON-array or whitespace-separated backend args
-  AGY_ACP_BIN             path to agy_acp_server.par
+  AGY_CLI_BIN             path to Antigravity CLI (defaults to PATH or ~/.local/bin/agy)
+  AGY_ACP_BIN             path to an existing standalone ACP server
   AGY_ACP_AUTH_METHOD     optional backend authentication method id
-  GROK_SHIM_INTERJECT     "queue" (default): deliver busy messages at the turn
-                          boundary; "reject": fail them loudly
+  GROK_SHIM_INTERJECT     "reject" refuses messages sent during an active turn
   GROK_SHIM_QUEUE_NOTICE  text of the notice shown while a message waits;
                           "off" keeps the queue silent
   GROK_SHIM_ENVIRONMENT   "off" stops the per-session environment block from
                           being prepended (default: on)
-  GROK_SHIM_STEER         queue (default for agy) or inject (Maka's session/inject)
+  GROK_SHIM_STEER         override steering: prompt, queue or inject
   GROK_SHIM_MODELS        comma-separated model list, id:Label
   GROK_SHIM_DEBUG         set to 1 to log to stderr
 `;
@@ -147,6 +147,7 @@ async function startStdioServer() {
     currentModelId: profile.currentModelId,
     prefixKind: profile.prefixKind,
     steerVia: profile.steerVia,
+    resumeVia: profile.resumeVia,
     explicitProfile: profile.explicitProfile !== false,
     lifecycle,
     authMethod: profile.authMethod,

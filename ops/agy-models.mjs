@@ -6,7 +6,7 @@ import "../src/bootstrap.js";
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 
-import { resolveAgyAcpCommand } from "../src/backends/agy/index.js";
+import { agyModelsFromSession, resolveAgyAcpCommand } from "../src/backends/agy/index.js";
 
 const argv = process.argv.slice(2);
 const flag = (name) => argv.includes(`--${name}`);
@@ -26,10 +26,7 @@ const pending = new Map();
 let nextId = 1;
 let stderrTail = "";
 let sessionId = null;
-// Anything the server streams for the turn in flight. A turn can end with
-// `end_turn` and still carry no answer — the harness turns a backend rejection
-// into an error string and closes normally, which is exactly the failure mode a
-// stopReason check alone hides.
+// Record streamed output alongside the stop reason when checking a live turn.
 const streamed = [];
 
 createInterface({ input: child.stdout, crlfDelay: Infinity }).on("line", (line) => {
@@ -92,11 +89,11 @@ if (session.error) {
 }
 sessionId = session.result.sessionId;
 
-const modelOption = (session.result.configOptions ?? []).find((option) => option?.id === "model");
-const offered = (modelOption?.options ?? []).map((option) => option.value);
-console.log(`server offers ${offered.length} models, current ${modelOption?.currentValue}:`);
-for (const option of modelOption?.options ?? []) {
-  console.log(`  ${option.value.padEnd(26)} ${option.name}`);
+const models = agyModelsFromSession(session.result);
+const offered = (models?.availableModels ?? []).map((model) => model.modelId);
+console.log(`server offers ${offered.length} models, current ${models?.currentModelId}:`);
+for (const model of models?.availableModels ?? []) {
+  console.log(`  ${model.modelId.padEnd(26)} ${model.name ?? model.modelId}`);
 }
 
 const candidates = onlyModel ? [onlyModel] : offered;

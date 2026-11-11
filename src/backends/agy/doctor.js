@@ -1,6 +1,12 @@
 import { macArchitectures } from "../../checks.js";
+import { resolveAgyAcpCommand } from "./index.js";
 
-export function checkAgyInstallation({ config, add, executable }) {
+export function checkAgyInstallation({ config, env, add, executable }) {
+  const backend = resolveAgyAcpCommand(env);
+  if (backend.kind === "agy-cli") {
+    executable("agy-cli", backend.command);
+    return;
+  }
   for (const [name, file] of [["agy-server", config.agyBin], ["agy-helper", config.agyHelper]]) {
     if (!executable(name, file)) continue;
     try {

@@ -19,8 +19,8 @@ agent is busy. It includes adapters for Antigravity ACP and Maka, plus a custom
 backend command setting. The CLI uses Node built-ins only; backend executables
 are installed separately. A real Grok Build CLI can coexist with the bridge.
 
-Currently, agy supports only Gemini models; available models depend on the
-backend version and account permissions.
+The Antigravity adapter starts the installed `agy acp` command. The model picker
+uses the catalogue Antigravity provides for your account.
 
 ## Install on a Mac
 
@@ -85,12 +85,6 @@ per-machine state and the optional login item. `doctor` checks installation
 without starting services, signing in or calling models; it does not replace a
 live backend check.
 
-Antigravity compatibility is separate from service authorization. Google's
-current terms restrict third-party login use, and permission for personal
-subscriptions through this integration has not been established. See
-[Antigravity compatibility and service terms](docs/backends.md#compatibility-and-service-terms)
-before configuring it. Maka setup is described in the same guide.
-
 ## CLI routing
 
 | `RAFT_GROK_BACKEND` | Behavior |
@@ -115,12 +109,12 @@ unprefixed IDs are treated as agy.
   backend context compaction.
 - Agy model selections use `session/set_model`. Maka selections use the session's
   `model` and `thinking_level` config options.
-- Busy messages are queued for agy. Maka receives `session/inject` when supported;
-  unsupported injection or a turn that just ended falls back to the queue.
+- Antigravity CLI steers with a concurrent `session/prompt`. Maka uses
+  `session/inject` when supported.
 - A queued message produces a visible notice. The original prompt response is
   held until queued prompts finish so Raft receives their output within its turn.
 - Successful session loads retain the requested ID if the backend omits it.
-  Failed loads use Raft's missing-session error shape, allowing a fresh session.
+  Raft can start a fresh session when a saved session is unavailable.
 
 Backend capabilities and agy maintenance are documented in
 [Backends](docs/backends.md). The UI still labels this runtime Grok Build.
@@ -133,12 +127,13 @@ Machine paths are listed in [.env.sample](.env.sample) and the
 | Variable | Purpose |
 | --- | --- |
 | `GROK_SHIM_PROFILE` | `agy` or `maka`, set per agent |
+| `AGY_CLI_BIN` | path to the official agy CLI when it cannot be found automatically |
 | `RAFT_GROK_BACKEND` | choose shim or real CLI as above |
 | `GROK_SHIM_BACKEND_BIN` / `GROK_SHIM_BACKEND_ARGS` | custom backend executable and JSON-array or whitespace-separated arguments |
 | `GROK_SHIM_MODELS` | model filter and fallback catalogue, comma-separated `id:Label` |
 | `GROK_SHIM_MODEL_FAMILIES` | filter the agy catalogue by family |
 | `GROK_SHIM_PROBE=off` | skip agy discovery and use the declared catalogue |
-| `GROK_SHIM_INTERJECT=reject` | reject busy messages instead of queueing them |
+| `GROK_SHIM_INTERJECT=reject` | reject messages sent during an active turn |
 | `GROK_SHIM_QUEUE_NOTICE` | replace the queue notice; `off` disables it |
 | `GROK_SHIM_ENVIRONMENT=off` | omit the shim's environment context block |
 | `GROK_SHIM_DEBUG=1` | write shim diagnostics to stderr |
@@ -165,14 +160,11 @@ not require backend sign-in or real model calls.
 
 ## Background
 
-The integration approach and protocol experiments are covered in these articles:
+These articles describe the original integration. Use the setup guide above for
+the current Antigravity CLI configuration.
 
 - [Integrating Antigravity CLI into External Programs](https://2bab.me/en/blog/2026-10-18-antigravity-external-integration/) ([中文](https://2bab.me/zh/blog/2026-10-18-antigravity-external-integration/))
 - [Integrating Antigravity and Apache/Maka into Raft via ACP](https://2bab.me/en/blog/2026-10-20-raft-runtime-slot/) ([中文](https://2bab.me/zh/blog/2026-10-20-raft-runtime-slot/))
-
-Related projects: [Raft](https://github.com/botiverse/raft-source),
-[Maka](https://github.com/apache/maka), and
-[antigravity-protocol](https://github.com/2BAB/antigravity-protocol).
 
 ## License
 

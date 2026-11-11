@@ -15,7 +15,7 @@ function scratch(t) {
   return directory;
 }
 
-test("without .env, legacy macOS paths and command defaults are preserved", () => {
+test("without .env, the bridge uses the standard macOS paths", () => {
   const config = readConfig({ HOME: "/example/home" });
   assert.equal(config.agyBin, "/example/home/Library/Application Support/agy-acp/agy_acp_server.par");
   assert.equal(config.makaBin, "maka");
@@ -23,7 +23,7 @@ test("without .env, legacy macOS paths and command defaults are preserved", () =
   assert.equal(config.makaPort, 64150);
   assert.equal(config.raftApp, "/Applications/Raft Desktop.app");
   assert.equal(config.raftHome, "/example/home/.slock");
-  assert.equal(config.raftComputerScript, "/example/home/Desktop/code/active/raft-source/packages/computer/dist/raft-computer.js");
+  assert.equal(config.raftComputerScript, null);
 });
 
 test("dotenv fills missing values, preserves even empty process overrides, and does not evaluate shell text", (t) => {

@@ -18,7 +18,7 @@ Raft 的 Grok Build 适配器 → grok（本桥接程序）→ 你的 ACP agent
 CLI 只使用 Node 内置模块，后端可执行文件需要单独安装。
 真实的 Grok Build CLI 也可以与本桥接程序共存。
 
-目前 agy 只支持 Gemini 模型，具体可用型号取决于后端版本和账号权限。
+Antigravity 适配器启动本机安装的 `agy acp`。Raft 的模型列表来自 Antigravity 为你的账号提供的模型。
 
 ## 在 Mac 上安装
 
@@ -77,11 +77,6 @@ export PATH="$HOME/.local/bin:$PATH"
 完整路径配置、认证、每台 Mac 的运行状态和可选登录项，见 [Mac 安装说明](docs/mac-setup.md)。
 `doctor` 只检查安装情况，不启动服务、不登录，也不调用模型；它不能代替真实后端验证。
 
-Antigravity 的技术兼容性与服务使用授权是两件事。Google 当前条款限制通过第三方软件
-使用 Antigravity 登录，本集成是否允许使用个人订阅尚未得到确认。
-配置前请阅读 [Antigravity 兼容性与服务条款](docs/backends.md#compatibility-and-service-terms)。
-同一份指南也包含 Maka 的安装说明。
-
 ## CLI 路由
 
 | `RAFT_GROK_BACKEND` | 行为 |
@@ -105,12 +100,12 @@ Antigravity 的技术兼容性与服务使用授权是两件事。Google 当前�
   空 prompt 在本地结束，不会消耗这次机会。后端压缩上下文后，也不会再次插入。
 - agy 通过 `session/set_model` 切换模型；Maka 使用会话的 `model` 和
   `thinking_level` 配置项。
-- agy 忙碌时收到的消息会排队。Maka 支持时使用 `session/inject`；
-  不支持注入，或当前回合刚好结束时，回退为排队。
+- Antigravity CLI 通过并行的 `session/prompt` 在回合中追加指令。Maka 支持时使用
+  `session/inject`，否则把消息放进队列。
 - 消息入队时会显示提示。shim 会等待队列中的 prompt 全部完成后，
   再返回最初的 prompt 响应，让 Raft 在同一回合中收到这些输出。
-- 会话恢复成功但后端没有返回 ID 时，保留请求中的 ID。
-  恢复失败时，使用 Raft 的“会话不存在”错误格式，让它能够创建新会话。
+- 会话恢复成功但后端省略 ID 时，保留请求中的 ID。
+  已保存的会话不可用时，Raft 可以创建新会话。
 
 后端能力和 agy 维护说明见[后端指南](docs/backends.md)。
 Raft 界面中的 runtime 名称仍显示为 Grok Build。
@@ -123,12 +118,13 @@ Raft 界面中的 runtime 名称仍显示为 Grok Build。
 | 环境变量 | 用途 |
 | --- | --- |
 | `GROK_SHIM_PROFILE` | `agy` 或 `maka`，按 agent 设置 |
+| `AGY_CLI_BIN` | 无法自动找到官方 agy 时指定路径 |
 | `RAFT_GROK_BACKEND` | 按上表选择 shim 或真实 CLI |
 | `GROK_SHIM_BACKEND_BIN` / `GROK_SHIM_BACKEND_ARGS` | 自定义后端可执行文件及参数；参数支持 JSON 数组或按空白分隔的字符串 |
 | `GROK_SHIM_MODELS` | 模型过滤条件和探测失败时的备用列表，格式为逗号分隔的 `id:Label` |
 | `GROK_SHIM_MODEL_FAMILIES` | 按模型系列过滤 agy 的模型列表 |
 | `GROK_SHIM_PROBE=off` | 跳过 agy 模型探测，使用配置声明的列表 |
-| `GROK_SHIM_INTERJECT=reject` | agent 忙碌时拒绝新消息，而不是排队 |
+| `GROK_SHIM_INTERJECT=reject` | 拒绝当前回合结束前收到的新消息 |
 | `GROK_SHIM_QUEUE_NOTICE` | 自定义排队提示；设为 `off` 可关闭 |
 | `GROK_SHIM_ENVIRONMENT=off` | 不添加 shim 提供的环境信息块 |
 | `GROK_SHIM_DEBUG=1` | 将 shim 诊断信息写入 stderr |
@@ -152,14 +148,10 @@ npm test
 
 ## 背景文章
 
-以下两篇文章介绍了集成方式和协议实验：
+这两篇文章记录了最初的集成过程。当前 Antigravity CLI 的配置方法见上面的安装说明。
 
 - [将 Antigravity CLI 集成到外部程序](https://2bab.me/zh/blog/2026-10-18-antigravity-external-integration/)（[English](https://2bab.me/en/blog/2026-10-18-antigravity-external-integration/)）
 - [通过 ACP 把 Antigravity 和 Apache/Maka 接进 Raft](https://2bab.me/zh/blog/2026-10-20-raft-runtime-slot/)（[English](https://2bab.me/en/blog/2026-10-20-raft-runtime-slot/)）
-
-相关项目：[Raft](https://github.com/botiverse/raft-source)、
-[Maka](https://github.com/apache/maka)、
-[antigravity-protocol](https://github.com/2BAB/antigravity-protocol)。
 
 ## 许可证
 

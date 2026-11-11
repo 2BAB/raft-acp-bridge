@@ -53,7 +53,7 @@ async function resolveBaseProfile(env, log) {
     ["agy", resolveAgyAcpCommand(env)],
     ["maka", resolveMakaCommand(env)],
   ].filter(([, backend]) => findExecutable(backend.command, env));
-  if (available.length === 0) throw new Error("no ACP backend found: install Maka or configure AGY_ACP_BIN / MAKA_BIN");
+  if (available.length === 0) throw new Error("no ACP backend found: install agy or Maka, or configure AGY_CLI_BIN / MAKA_BIN");
   const profiles = await Promise.all(available.map(([kind]) => kind === "agy" ? agyProfile(env, log) : makaProfile(env, log)));
   return { ...profiles[0], models: profiles.flatMap((profile) => profile.models), explicitProfile: false };
 }
@@ -95,8 +95,8 @@ async function agyProfile(env, log) {
   const current = [served?.currentModelId, DEFAULT_MODEL_ID].find((id) => bare.some((model) => model.modelId === id)) ?? bare[0].modelId;
   const agyModels = withModelPrefix("agy", bare);
   return {
-    kind: "agy-acp",
-    backend: { ...backend, args: [] },
+    kind: backend.kind,
+    backend,
     backendEnv,
     authMethod: nonEmptyString(env.AGY_ACP_AUTH_METHOD),
     modelSelection: "set-model",
@@ -105,8 +105,7 @@ async function agyProfile(env, log) {
     currentModelId: `agy_${current}`,
     prefixKind: "agy",
     explicitProfile: true,
-    // agy answers `_x.ai/interject` with null and does nothing, so its busy
-    // messages are queued and delivered at the turn boundary.
-    steerVia: "queue",
+    steerVia: backend.kind === "agy-cli" ? "prompt" : "queue",
+    resumeVia: backend.kind === "agy-cli" ? "session/resume" : "session/load",
   };
 }

@@ -49,9 +49,10 @@ Client and backend request IDs are tracked separately. Reverse requests such as
 `session/request_permission` are forwarded with a separate ID range to avoid
 colliding with Raft's requests.
 
-Busy delivery is either a backend injection or a sequential queue. Queueing
-holds the original prompt response until the queued prompts finish. A backend
-that returns `no_running_turn` during an injection race also uses the queue.
+Busy delivery uses a concurrent prompt for Antigravity CLI, an injection for
+Maka, or a sequential queue. The bridge holds the original prompt response
+until concurrent or queued prompts finish. Maka messages also use the queue
+when the turn ends before an injection reaches the backend.
 
 ## Backend boundaries
 

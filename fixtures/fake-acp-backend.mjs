@@ -75,6 +75,12 @@ reader.on("line", (line) => {
           id: message.id,
           result: {
             sessionId,
+            ...(process.env.FIXTURE_NATIVE_AGY ? {
+              models: {
+                currentModelId: currentModel,
+                availableModels: modelIds.map((modelId) => ({ modelId, name: modelId })),
+              },
+            } : {}),
             configOptions: [
               {
                 type: "select",
@@ -82,7 +88,9 @@ reader.on("line", (line) => {
                 name: "Model",
                 category: "model",
                 currentValue: currentModel,
-                options: modelIds.map((value) => ({ value, name: value })),
+                options: process.env.FIXTURE_NATIVE_AGY
+                  ? [{ value: "claude-sonnet-5-5", name: "Claude Sonnet" }]
+                  : modelIds.map((value) => ({ value, name: value })),
               },
               {
                 type: "select", id: "thinking_level", name: "Thinking level",
@@ -119,6 +127,15 @@ reader.on("line", (line) => {
         send({ id: message.id, result: { configOptions: [] } });
         return;
       }
+      case "session/resume":
+        if (!process.env.FIXTURE_NATIVE_AGY) {
+          send({ id: message.id, error: { code: -32601, message: "method not implemented" } });
+        } else if (String(message.params?.sessionId ?? "").startsWith("live")) {
+          send({ id: message.id, result: {} });
+        } else {
+          send({ id: message.id, error: { code: -32603, message: `Failed to read session ${message.params.sessionId}; retry, or load it with session/load` } });
+        }
+        return;
       case "session/load":
         // Agy answers a live session with modes/configOptions and no sessionId;
         // anything else is a miss Raft is expected to fall back from.

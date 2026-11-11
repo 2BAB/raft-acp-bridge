@@ -10,6 +10,7 @@ import { arrayValue, nonEmptyString, recordValue } from "./util.js";
 const INTERJECT_METHOD = "_x.ai/interject";
 const SET_MODEL_METHOD = "session/set_model";
 const PROMPT_METHOD = "session/prompt";
+const STEER_PROMPT = "steer-prompt";
 const SESSION_NEW = "session/new";
 const SESSION_LOAD = "session/load";
 
@@ -58,11 +59,10 @@ const MISSING_SESSION = {
  *    `_meta.systemPromptOverride` on `session/new`. ACP has no such field, so
  *    it is prepended to the first prompt of the session.
  *  - `session/set_model`, forwarded or translated to backend config options.
- *  - busy delivery (`_x.ai/interject`). agy cannot steer, and worse, it answers
- *    every `_`-prefixed extension method with `null` — an ack that means
- *    nothing. So the shim queues the text and delivers it at the turn boundary,
- *    holding Raft's prompt response until the queue drains so the queued turns
- *    land inside the turn Raft still believes is open.
+ *  - busy delivery (`_x.ai/interject`). Antigravity CLI steers through a
+ *    concurrent prompt and Maka uses injection. Standalone agy queues the
+ *    text at the turn boundary. The shim holds Raft's prompt response while
+ *    concurrent prompts settle or the queue drains.
  */
 export class Shim {
   #log;
@@ -77,6 +77,7 @@ export class Shim {
   #prefixKind;
   #explicitProfile;
   #steerVia;
+  #resumeVia;
   #currentModelId;
   #lifecycle;
   #backendPending = new Map();
@@ -96,11 +97,10 @@ export class Shim {
   #authMethod;
   #exiting = false;
 
-  constructor({ backend, backendEnv, models, log, interjectMode = "queue", queueNotice, environment = true, modelSelection = "set-model", currentModelId = null, prefixKind = null, explicitProfile = true, steerVia = "queue", lifecycle = {}, authMethod = null }) {
+  constructor({ backend, backendEnv, models, log, interjectMode = "queue", queueNotice, environment = true, modelSelection = "set-model", currentModelId = null, prefixKind = null, explicitProfile = true, steerVia = "queue", resumeVia = SESSION_LOAD, lifecycle = {}, authMethod = null }) {
     this.#backendCommand = backend.command;
     this.#backendArgs = backend.args;
-    // A profile may need to change what the backend sees (agy's file credential
-    // store). Everything else inherits this process's environment unchanged.
+    // Profiles can supply the environment for their backend process.
     this.#backendEnv = backendEnv ?? process.env;
     this.#lifecycle = lifecycle;
     this.#authMethod = authMethod;
@@ -115,6 +115,7 @@ export class Shim {
     this.#prefixKind = prefixKind;
     this.#explicitProfile = explicitProfile;
     this.#steerVia = steerVia;
+    this.#resumeVia = resumeVia;
   }
 
   start(client) {
@@ -223,6 +224,8 @@ export class Shim {
         return this.#finishSession(entry, message);
       case PROMPT_METHOD:
         return this.#finishPrompt(entry, message);
+      case STEER_PROMPT:
+        return this.#finishSteerPrompt(entry, message);
       case SET_MODEL_METHOD:
         this.#lifecycle.afterModelChange?.({ sessionId: entry.sessionId, error: hasError(message) });
         this.#relayResponse(entry, message);
@@ -309,7 +312,10 @@ export class Shim {
   #finishSession(entry, message) {
     if (hasError(message)) {
       this.#pendingSessionInit = null;
-      if (entry.tag === SESSION_LOAD && isUnsupportedMethod(message.error)) {
+      if (entry.tag === SESSION_LOAD && (
+        isUnsupportedMethod(message.error) ||
+        (this.#resumeVia === "session/resume" && /^Failed to read session .*; retry, or load it with session\/load$/i.test(message.error?.message ?? ""))
+      )) {
         this.#client.fail(entry.clientId, MISSING_SESSION.code, MISSING_SESSION.message);
         return;
       }
@@ -318,10 +324,7 @@ export class Shim {
     }
 
     const result = recordValue(message.result) ?? {};
-    // Agy answers a live `session/load` with modes/configOptions and NO
-    // sessionId, because the id never changed. Requiring one here turned a
-    // successful resume into "backend returned a session without a sessionId",
-    // which Raft cannot recover from.
+    // A backend can resume a session successfully without repeating its ID.
     const sessionId =
       nonEmptyString(result.sessionId) ??
       nonEmptyString(recordValue(result._meta)?.sessionId) ??
@@ -349,6 +352,8 @@ export class Shim {
       queue: [],
       inFlight: false,
       heldResponse: null,
+      pendingSteers: 0,
+      promptWaitingForSteer: null,
     });
     this.#client.respond(entry.clientId, { ...result, sessionId });
     this.#lifecycle.sessionReady?.({ sessionId, method: entry.tag });
@@ -362,6 +367,10 @@ export class Shim {
   #finishPrompt(entry, message) {
     const session = entry.sessionId ? this.#sessions.get(entry.sessionId) : null;
     if (!session) return this.#relayResponse(entry, message);
+    if (session.pendingSteers > 0) {
+      session.promptWaitingForSteer = { entry, message };
+      return;
+    }
 
     const lastStop = hasError(message)
       ? "error"
@@ -389,6 +398,19 @@ export class Shim {
 
     session.inFlight = false;
     return this.#relayResponse(entry, message);
+  }
+
+  #finishSteerPrompt(entry, message) {
+    const session = this.#sessions.get(entry.sessionId);
+    if (hasError(message)) this.#relayResponse(entry, message);
+    else this.#client.respond(entry.clientId, {});
+    if (!session) return;
+    session.pendingSteers--;
+    if (session.pendingSteers === 0 && session.promptWaitingForSteer) {
+      const held = session.promptWaitingForSteer;
+      session.promptWaitingForSteer = null;
+      this.#finishPrompt(held.entry, held.message);
+    }
   }
 
   /** Sends the next queued message as a fresh prompt, without a Raft-side id. */
@@ -459,14 +481,9 @@ export class Shim {
         this.#selectModelViaConfig(message, { sessionId, modelId, params });
         return;
       }
-      // Agy implements `session/set_model` for real: it accepts its own
-      // `gemini-4-argon-<effort>` ids and the next backend request uses the
-      // chosen one. So this is forwarded, not faked — and a rejection reaches
-      // the caller instead of being swallowed.
-      // The effort lives in the model id; `_meta.reasoningEffort` means nothing.
+      // Antigravity encodes reasoning effort in its model IDs.
       delete params._meta;
-      // Agents created before the real ids existed still carry the shim's old
-      // invented one; agy would reject it, so route it to its own default.
+      // Translate the legacy alias for saved agent configurations.
       const effectiveModelId = modelId === LEGACY_MODEL_ID ? DEFAULT_MODEL_ID : modelId;
       this.#log(`session ${sessionId}: selecting ${effectiveModelId}`);
       this.#lifecycle.beforeModelChange?.({ sessionId });
@@ -507,7 +524,7 @@ export class Shim {
         systemPromptOverride: nonEmptyString(meta.systemPromptOverride),
         cwd: nonEmptyString(params.cwd),
       };
-      this.#sendToBackend(method, params, {
+      this.#sendToBackend(method === SESSION_LOAD ? this.#resumeVia : method, params, {
         clientId: message.id,
         tag: method,
         requestedSessionId: method === SESSION_LOAD ? nonEmptyString(params.sessionId) : null,
@@ -564,11 +581,7 @@ export class Shim {
     this.#sendToBackend(method, message.params ?? {}, { clientId: message.id, tag: method });
   }
 
-  /**
-   * Raft's busy delivery. Queuing is the only honest option Agy offers: it
-   * answers `_x.ai/interject` with `null` while doing nothing, so acking and
-   * forwarding the text to a backend that ignores it would be silent loss.
-   */
+  /** Translate busy delivery to the active backend's supported operation. */
   #onInterject(message) {
     if (this.#interjectMode === "reject") {
       this.#client.fail(
@@ -590,6 +603,17 @@ export class Shim {
 
     if (this.#steerVia === "inject") {
       this.#steerViaInject(message, session, text);
+      return;
+    }
+
+    if (this.#steerVia === "prompt" && session.inFlight) {
+      // Antigravity CLI treats a concurrent prompt as steering. Keep Raft's
+      // original turn open until every submitted prompt has settled.
+      session.pendingSteers++;
+      this.#sendToBackend(PROMPT_METHOD, {
+        sessionId,
+        prompt: [{ type: "text", text }],
+      }, { clientId: message.id, tag: STEER_PROMPT, sessionId });
       return;
     }
 

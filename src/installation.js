@@ -31,8 +31,7 @@ export function makaExecutable(config, env = process.env) {
 
 export function computerCommand(config, env = process.env) {
   if (env.RAFT_COMPUTER_BIN?.trim()) return { command: config.raftComputerBin, args: [] };
-  // Existing source-based installations retain their launch command.
-  if (env.RAFT_SOURCE?.trim() || fs.existsSync(config.raftComputerScript)) {
+  if (config.raftComputerScript) {
     return { command: process.execPath, args: [config.raftComputerScript] };
   }
   return { command: config.raftComputerBin, args: [] };
