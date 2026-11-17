@@ -1,5 +1,11 @@
 # raft-acp-bridge
 
+> [!IMPORTANT]
+> **Archived, no longer maintained.** Raft's Antigravity runtime is now built
+> on the official [OAR](https://github.com/botiverse/oar) (Open Agent Runtime)
+> adapter, which drives the native `agy acp` entry point directly. Use OAR
+> instead of this bridge. The code and notes below are kept for reference.
+
 **Reuse Raft's Grok Build ACP integration as a general bridge to other ACP
 agents.** Raft already communicates with Grok Build through ACP. This project
 reuses that connection to run agents such as Antigravity and Maka inside Raft,

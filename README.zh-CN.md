@@ -1,5 +1,10 @@
 # raft-acp-bridge
 
+> [!IMPORTANT]
+> **本仓库已归档，不再维护。** Raft 的 Antigravity 运行时现在基于官方的
+> [OAR](https://github.com/botiverse/oar)（Open Agent Runtime）实现，直接对接
+> 原生的 `agy acp`。请改用 OAR，不必再安装本桥接器。下面的代码和文档仅作留档。
+
 **借用 Raft 已有的 Grok Build ACP 接口，把它变成连接其他 ACP agent 的通用桥梁。**
 Raft 本来就通过 ACP 调用 Grok Build，本项目复用这条接入路径，
 让 Antigravity、Maka 等 agent 也能在 Raft 中运行，无需修改 Raft 应用。
